@@ -6,6 +6,7 @@ build/
 dist/
 
 # Configuration files containing credentials (NEVER COMMIT THESE!)
+assigned-todos-slack.js
 config.json
 **/config.json
 .env

@@ -431,6 +431,392 @@ export const tools: Tool[] = [
   },
 
   /* ===========================
+   * TODO SETS & LISTS
+   * =========================== */
+  {
+    name: 'basecamp_get_todoset',
+    description: 'Get the To-do Set for a project (contains all todo lists)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string', description: 'Project ID' }
+      },
+      required: ['project_id']
+    }
+  },
+  {
+    name: 'basecamp_list_todolists',
+    description: 'List all to-do lists in a project',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string', description: 'Project ID' },
+        todoset_id: { type: 'string', description: 'To-do Set ID' },
+        status: { type: 'string', description: 'Filter by status: active, archived, or trashed' }
+      },
+      required: ['project_id', 'todoset_id']
+    }
+  },
+  {
+    name: 'basecamp_get_todolist',
+    description: 'Get details of a specific to-do list',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string', description: 'Project ID' },
+        todolist_id: { type: 'string', description: 'To-do List ID' }
+      },
+      required: ['project_id', 'todolist_id']
+    }
+  },
+  {
+    name: 'basecamp_create_todolist',
+    description: 'Create a new to-do list in a project',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string', description: 'Project ID' },
+        todoset_id: { type: 'string', description: 'To-do Set ID' },
+        name: { type: 'string', description: 'To-do list name' },
+        description: { type: 'string', description: 'To-do list description' }
+      },
+      required: ['project_id', 'todoset_id', 'name']
+    }
+  },
+  {
+    name: 'basecamp_update_todolist',
+    description: 'Update a to-do list',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        todolist_id: { type: 'string' },
+        name: { type: 'string' },
+        description: { type: 'string' }
+      },
+      required: ['project_id', 'todolist_id']
+    }
+  },
+
+  /* ===========================
+   * TODOS (Traditional Tasks)
+   * =========================== */
+  {
+    name: 'basecamp_list_todos',
+    description: 'List all to-dos in a to-do list',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string', description: 'Project ID' },
+        todolist_id: { type: 'string', description: 'To-do List ID' },
+        status: { type: 'string', description: 'Filter by status: active, archived, or trashed' },
+        completed: { type: 'boolean', description: 'Filter by completion status' }
+      },
+      required: ['project_id', 'todolist_id']
+    }
+  },
+  {
+    name: 'basecamp_get_todo',
+    description: 'Get details of a specific to-do',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        todo_id: { type: 'string' }
+      },
+      required: ['project_id', 'todo_id']
+    }
+  },
+  {
+    name: 'basecamp_create_todo',
+    description: 'Create a new to-do in a to-do list',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        todolist_id: { type: 'string' },
+        content: { type: 'string', description: 'To-do content/title' },
+        description: { type: 'string', description: 'Detailed description (HTML)' },
+        assignee_ids: { type: 'array', items: { type: 'number' }, description: 'Array of person IDs' },
+        due_on: { type: 'string', description: 'Due date (YYYY-MM-DD)' },
+        starts_on: { type: 'string', description: 'Start date (YYYY-MM-DD)' },
+        notify: { type: 'boolean', description: 'Notify assignees' }
+      },
+      required: ['project_id', 'todolist_id', 'content']
+    }
+  },
+  {
+    name: 'basecamp_update_todo',
+    description: 'Update a to-do',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        todo_id: { type: 'string' },
+        content: { type: 'string' },
+        description: { type: 'string' },
+        assignee_ids: { type: 'array', items: { type: 'number' } },
+        due_on: { type: 'string' },
+        starts_on: { type: 'string' }
+      },
+      required: ['project_id', 'todo_id']
+    }
+  },
+  {
+    name: 'basecamp_complete_todo',
+    description: 'Mark a to-do as completed',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        todo_id: { type: 'string' }
+      },
+      required: ['project_id', 'todo_id']
+    }
+  },
+  {
+    name: 'basecamp_uncomplete_todo',
+    description: 'Mark a to-do as incomplete',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        todo_id: { type: 'string' }
+      },
+      required: ['project_id', 'todo_id']
+    }
+  },
+
+  /* ===========================
+   * MESSAGES & MESSAGE BOARDS
+   * =========================== */
+  {
+    name: 'basecamp_list_messages',
+    description: 'List all messages in a message board',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        message_board_id: { type: 'string', description: 'Message Board ID' }
+      },
+      required: ['project_id', 'message_board_id']
+    }
+  },
+  {
+    name: 'basecamp_get_message',
+    description: 'Get a specific message with full content',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        message_id: { type: 'string' }
+      },
+      required: ['project_id', 'message_id']
+    }
+  },
+  {
+    name: 'basecamp_create_message',
+    description: 'Post a new message/announcement to the message board',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        message_board_id: { type: 'string' },
+        subject: { type: 'string', description: 'Message subject/title' },
+        content: { type: 'string', description: 'Message content (supports HTML)' }
+      },
+      required: ['project_id', 'message_board_id', 'subject', 'content']
+    }
+  },
+  {
+    name: 'basecamp_update_message',
+    description: 'Update an existing message',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        message_id: { type: 'string' },
+        subject: { type: 'string' },
+        content: { type: 'string' }
+      },
+      required: ['project_id', 'message_id']
+    }
+  },
+
+  /* ===========================
+   * DOCUMENTS & VAULTS
+   * =========================== */
+  {
+    name: 'basecamp_list_documents',
+    description: 'List all documents in a vault (Docs & Files)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        vault_id: { type: 'string', description: 'Vault ID from project dock' }
+      },
+      required: ['project_id', 'vault_id']
+    }
+  },
+  {
+    name: 'basecamp_get_document',
+    description: 'Get a specific document with full content',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        document_id: { type: 'string' }
+      },
+      required: ['project_id', 'document_id']
+    }
+  },
+  {
+    name: 'basecamp_create_document',
+    description: 'Create a new document in the vault',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        vault_id: { type: 'string' },
+        title: { type: 'string', description: 'Document title' },
+        content: { type: 'string', description: 'Document content (supports HTML)' }
+      },
+      required: ['project_id', 'vault_id', 'title', 'content']
+    }
+  },
+  {
+    name: 'basecamp_update_document',
+    description: 'Update an existing document',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        document_id: { type: 'string' },
+        title: { type: 'string' },
+        content: { type: 'string' }
+      },
+      required: ['project_id', 'document_id']
+    }
+  },
+
+  /* ===========================
+   * SCHEDULES & EVENTS
+   * =========================== */
+  {
+    name: 'basecamp_list_schedule_entries',
+    description: 'List all schedule entries (calendar events) in a project',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        schedule_id: { type: 'string', description: 'Schedule ID from project dock' },
+        status: { type: 'string', description: 'Filter by status' },
+        start_date: { type: 'string', description: 'Filter from date (YYYY-MM-DD)' },
+        end_date: { type: 'string', description: 'Filter to date (YYYY-MM-DD)' }
+      },
+      required: ['project_id', 'schedule_id']
+    }
+  },
+  {
+    name: 'basecamp_get_schedule_entry',
+    description: 'Get a specific schedule entry/event',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        entry_id: { type: 'string' }
+      },
+      required: ['project_id', 'entry_id']
+    }
+  },
+  {
+    name: 'basecamp_create_schedule_entry',
+    description: 'Create a new calendar event in the schedule',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        schedule_id: { type: 'string' },
+        summary: { type: 'string', description: 'Event title' },
+        starts_at: { type: 'string', description: 'Start date/time (ISO 8601)' },
+        ends_at: { type: 'string', description: 'End date/time (ISO 8601)' },
+        description: { type: 'string', description: 'Event description' },
+        all_day: { type: 'boolean', description: 'All-day event' },
+        participant_ids: { type: 'array', items: { type: 'number' }, description: 'Participant person IDs' },
+        notify: { type: 'boolean', description: 'Notify participants' }
+      },
+      required: ['project_id', 'schedule_id', 'summary', 'starts_at']
+    }
+  },
+  {
+    name: 'basecamp_update_schedule_entry',
+    description: 'Update a schedule entry/event',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        entry_id: { type: 'string' },
+        summary: { type: 'string' },
+        starts_at: { type: 'string' },
+        ends_at: { type: 'string' },
+        description: { type: 'string' },
+        all_day: { type: 'boolean' },
+        participant_ids: { type: 'array', items: { type: 'number' } }
+      },
+      required: ['project_id', 'entry_id']
+    }
+  },
+
+  /* ===========================
+   * CAMPFIRES (CHATS)
+   * =========================== */
+  {
+    name: 'basecamp_list_campfires',
+    description: 'List all Campfires (group chats) visible to the current user',
+    inputSchema: {
+      type: 'object',
+      properties: {}
+    }
+  },
+  {
+    name: 'basecamp_get_campfire',
+    description: 'Get details of a specific Campfire chat',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        campfire_id: { type: 'string' }
+      },
+      required: ['project_id', 'campfire_id']
+    }
+  },
+  {
+    name: 'basecamp_list_campfire_lines',
+    description: 'List chat messages/lines in a Campfire',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        campfire_id: { type: 'string' }
+      },
+      required: ['project_id', 'campfire_id']
+    }
+  },
+  {
+    name: 'basecamp_create_campfire_line',
+    description: 'Post a new message to a Campfire chat',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        campfire_id: { type: 'string' },
+        content: { type: 'string', description: 'Chat message content' }
+      },
+      required: ['project_id', 'campfire_id', 'content']
+    }
+  },
+
+  /* ===========================
    * UTILITY
    * =========================== */
   {

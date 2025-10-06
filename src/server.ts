@@ -119,6 +119,64 @@ export class BasecampMCPServer {
           case 'basecamp_get_events':
             return await this.getEvents(toolArgs.project_id, toolArgs.limit);
 
+          // Todo Sets & Todo Lists
+          case 'basecamp_get_todoset':
+            return await this.getTodoSet(toolArgs.project_id);
+          case 'basecamp_list_todolists':
+            return await this.listTodoLists(toolArgs.project_id, toolArgs.todoset_id, toolArgs.status);
+          case 'basecamp_get_todolist':
+            return await this.getTodoList(toolArgs.project_id, toolArgs.todolist_id);
+          case 'basecamp_create_todolist':
+            return await this.createTodoList(toolArgs.project_id, toolArgs.todoset_id, toolArgs.name, toolArgs.description);
+          case 'basecamp_update_todolist':
+            return await this.updateTodoList(toolArgs.project_id, toolArgs.todolist_id, toolArgs.name, toolArgs.description);
+
+          // Todos (Traditional Tasks)
+          case 'basecamp_list_todos':
+            return await this.listTodos(toolArgs.project_id, toolArgs.todolist_id, toolArgs.status, toolArgs.completed);
+          case 'basecamp_update_todo':
+            return await this.updateTodo(toolArgs);
+
+          // Messages & Message Boards
+          case 'basecamp_list_messages':
+            return await this.listMessages(toolArgs.project_id, toolArgs.message_board_id);
+          case 'basecamp_get_message':
+            return await this.getMessage(toolArgs.project_id, toolArgs.message_id);
+          case 'basecamp_create_message':
+            return await this.createMessage(toolArgs.project_id, toolArgs.message_board_id, toolArgs.subject, toolArgs.content);
+          case 'basecamp_update_message':
+            return await this.updateMessage(toolArgs.project_id, toolArgs.message_id, toolArgs.subject, toolArgs.content);
+
+          // Documents & Vaults
+          case 'basecamp_list_documents':
+            return await this.listDocuments(toolArgs.project_id, toolArgs.vault_id);
+          case 'basecamp_get_document':
+            return await this.getDocument(toolArgs.project_id, toolArgs.document_id);
+          case 'basecamp_create_document':
+            return await this.createDocument(toolArgs.project_id, toolArgs.vault_id, toolArgs.title, toolArgs.content);
+          case 'basecamp_update_document':
+            return await this.updateDocument(toolArgs.project_id, toolArgs.document_id, toolArgs.title, toolArgs.content);
+
+          // Schedules & Events
+          case 'basecamp_list_schedule_entries':
+            return await this.listScheduleEntries(toolArgs.project_id, toolArgs.schedule_id, toolArgs.status, toolArgs.start_date, toolArgs.end_date);
+          case 'basecamp_get_schedule_entry':
+            return await this.getScheduleEntry(toolArgs.project_id, toolArgs.entry_id);
+          case 'basecamp_create_schedule_entry':
+            return await this.createScheduleEntry(toolArgs);
+          case 'basecamp_update_schedule_entry':
+            return await this.updateScheduleEntry(toolArgs);
+
+          // Campfires (Chats)
+          case 'basecamp_list_campfires':
+            return await this.listCampfires();
+          case 'basecamp_get_campfire':
+            return await this.getCampfire(toolArgs.project_id, toolArgs.campfire_id);
+          case 'basecamp_list_campfire_lines':
+            return await this.listCampfireLines(toolArgs.project_id, toolArgs.campfire_id);
+          case 'basecamp_create_campfire_line':
+            return await this.createCampfireLine(toolArgs.project_id, toolArgs.campfire_id, toolArgs.content);
+
           // Search & Utility
           case 'basecamp_find_project':
             return await this.findProject(toolArgs.search_term);
@@ -522,8 +580,14 @@ export class BasecampMCPServer {
       args.project_id,
       args.todolist_id,
       args.content,
-      args.due_on,
-      args.assignee_ids || []
+      {
+        due_on: args.due_on,
+        starts_on: args.starts_on,
+        description: args.description,
+        assignee_ids: args.assignee_ids,
+        completion_subscriber_ids: args.completion_subscriber_ids,
+        notify: args.notify
+      }
     );
 
     return {
@@ -619,6 +683,316 @@ export class BasecampMCPServer {
         {
           type: 'text',
           text: JSON.stringify(parsed, null, 2),
+        },
+      ],
+    };
+  }
+
+  /* ===========================
+   * TODO SETS & TODO LISTS HANDLERS
+   * =========================== */
+
+  private async getTodoSet(projectId: string): Promise<CallToolResult> {
+    const response = await this.basecampApi.getTodoSet(projectId);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async listTodoLists(projectId: string, todosetId: string, status?: string): Promise<CallToolResult> {
+    const response = await this.basecampApi.getTodoLists(projectId, todosetId, status);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async getTodoList(projectId: string, todolistId: string): Promise<CallToolResult> {
+    const response = await this.basecampApi.getTodoList(projectId, todolistId);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async createTodoList(projectId: string, todosetId: string, name: string, description?: string): Promise<CallToolResult> {
+    const response = await this.basecampApi.createTodoList(projectId, todosetId, name, description || '');
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async updateTodoList(projectId: string, todolistId: string, name?: string, description?: string): Promise<CallToolResult> {
+    const response = await this.basecampApi.updateTodoList(projectId, todolistId, name, description);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2),
+        },
+      ],
+    };
+  }
+
+  /* ===========================
+   * TODOS HANDLERS
+   * =========================== */
+
+  private async listTodos(projectId: string, todolistId: string, status?: string, completed?: boolean): Promise<CallToolResult> {
+    const response = await this.basecampApi.getTodos(projectId, todolistId, status, completed);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async updateTodo(args: any): Promise<CallToolResult> {
+    const { project_id, todo_id, ...updates } = args;
+    const response = await this.basecampApi.updateTodo(project_id, todo_id, updates);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2),
+        },
+      ],
+    };
+  }
+
+  /* ===========================
+   * MESSAGES & MESSAGE BOARDS HANDLERS
+   * =========================== */
+
+  private async listMessages(projectId: string, messageBoardId: string): Promise<CallToolResult> {
+    const response = await this.basecampApi.getMessages(projectId, messageBoardId);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async getMessage(projectId: string, messageId: string): Promise<CallToolResult> {
+    const response = await this.basecampApi.getMessage(projectId, messageId);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async createMessage(projectId: string, messageBoardId: string, subject: string, content: string): Promise<CallToolResult> {
+    const response = await this.basecampApi.createMessage(projectId, messageBoardId, subject, content);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async updateMessage(projectId: string, messageId: string, subject?: string, content?: string): Promise<CallToolResult> {
+    const response = await this.basecampApi.updateMessage(projectId, messageId, subject, content);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2),
+        },
+      ],
+    };
+  }
+
+  /* ===========================
+   * DOCUMENTS & VAULTS HANDLERS
+   * =========================== */
+
+  private async listDocuments(projectId: string, vaultId: string): Promise<CallToolResult> {
+    const response = await this.basecampApi.getDocuments(projectId, vaultId);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async getDocument(projectId: string, documentId: string): Promise<CallToolResult> {
+    const response = await this.basecampApi.getDocument(projectId, documentId);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async createDocument(projectId: string, vaultId: string, title: string, content: string): Promise<CallToolResult> {
+    const response = await this.basecampApi.createDocument(projectId, vaultId, title, content);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async updateDocument(projectId: string, documentId: string, title?: string, content?: string): Promise<CallToolResult> {
+    const response = await this.basecampApi.updateDocument(projectId, documentId, title, content);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2),
+        },
+      ],
+    };
+  }
+
+  /* ===========================
+   * SCHEDULES & EVENTS HANDLERS
+   * =========================== */
+
+  private async listScheduleEntries(projectId: string, scheduleId: string, status?: string, startDate?: string, endDate?: string): Promise<CallToolResult> {
+    const response = await this.basecampApi.getScheduleEntries(projectId, scheduleId, status, startDate, endDate);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async getScheduleEntry(projectId: string, entryId: string): Promise<CallToolResult> {
+    const response = await this.basecampApi.getScheduleEntry(projectId, entryId);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async createScheduleEntry(args: any): Promise<CallToolResult> {
+    const { project_id, schedule_id, summary, starts_at, ends_at, description, participant_ids, all_day, notify } = args;
+    const response = await this.basecampApi.createScheduleEntry(
+      project_id,
+      schedule_id,
+      summary,
+      starts_at,
+      ends_at,
+      { description, participant_ids, all_day, notify }
+    );
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async updateScheduleEntry(args: any): Promise<CallToolResult> {
+    const { project_id, entry_id, ...updates } = args;
+    const response = await this.basecampApi.updateScheduleEntry(project_id, entry_id, updates);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2),
+        },
+      ],
+    };
+  }
+
+  /* ===========================
+   * CAMPFIRES (CHATS) HANDLERS
+   * =========================== */
+
+  private async listCampfires(): Promise<CallToolResult> {
+    const response = await this.basecampApi.getCampfires();
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async getCampfire(projectId: string, campfireId: string): Promise<CallToolResult> {
+    const response = await this.basecampApi.getCampfire(projectId, campfireId);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async listCampfireLines(projectId: string, campfireId: string): Promise<CallToolResult> {
+    const response = await this.basecampApi.getCampfireLines(projectId, campfireId);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async createCampfireLine(projectId: string, campfireId: string, content: string): Promise<CallToolResult> {
+    const response = await this.basecampApi.createCampfireLine(projectId, campfireId, content);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2),
         },
       ],
     };

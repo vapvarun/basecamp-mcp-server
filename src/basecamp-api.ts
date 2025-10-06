@@ -370,13 +370,50 @@ export class BasecampAPI {
   }
 
   /* ===========================
-   * TODOS & TODO LISTS
+   * TODOSETS
    * =========================== */
 
-  async getTodoLists(projectId: string, status?: string, page = 1) {
+  async getTodoSet(projectId: string) {
+    return this.get(`/${this.accountId}/buckets/${projectId}/todosets.json`);
+  }
+
+  /* ===========================
+   * TODO LISTS
+   * =========================== */
+
+  async getTodoLists(projectId: string, todosetId: string, status?: string, page = 1) {
     const query: Record<string, string> = { page: page.toString() };
     if (status) query.status = status;
-    return this.get(`/${this.accountId}/buckets/${projectId}/todosets/todos.json`, query);
+    return this.get(`/${this.accountId}/buckets/${projectId}/todosets/${todosetId}/todolists.json`, query);
+  }
+
+  async getTodoList(projectId: string, todolistId: string) {
+    return this.get(`/${this.accountId}/buckets/${projectId}/todolists/${todolistId}.json`);
+  }
+
+  async createTodoList(projectId: string, todosetId: string, name: string, description = '') {
+    return this.post(`/${this.accountId}/buckets/${projectId}/todosets/${todosetId}/todolists.json`, {
+      name,
+      description
+    });
+  }
+
+  async updateTodoList(projectId: string, todolistId: string, name?: string, description?: string) {
+    const data: any = {};
+    if (name) data.name = name;
+    if (description) data.description = description;
+    return this.put(`/${this.accountId}/buckets/${projectId}/todolists/${todolistId}.json`, data);
+  }
+
+  /* ===========================
+   * TODOS
+   * =========================== */
+
+  async getTodos(projectId: string, todolistId: string, status?: string, completed?: boolean, page = 1) {
+    const query: Record<string, string> = { page: page.toString() };
+    if (status) query.status = status;
+    if (completed !== undefined) query.completed = completed.toString();
+    return this.get(`/${this.accountId}/buckets/${projectId}/todolists/${todolistId}/todos.json`, query);
   }
 
   async getTodo(projectId: string, todoId: string) {
@@ -387,13 +424,16 @@ export class BasecampAPI {
     projectId: string,
     todolistId: string,
     content: string,
-    dueOn?: string,
-    assigneeIds: number[] = []
+    options?: {
+      description?: string;
+      assignee_ids?: number[];
+      completion_subscriber_ids?: number[];
+      notify?: boolean;
+      due_on?: string;
+      starts_on?: string;
+    }
   ) {
-    const data: any = { content };
-    if (dueOn) data.due_on = dueOn;
-    if (assigneeIds.length > 0) data.assignee_ids = assigneeIds;
-
+    const data: any = { content, ...options };
     return this.post(`/${this.accountId}/buckets/${projectId}/todolists/${todolistId}/todos.json`, data);
   }
 
@@ -407,6 +447,164 @@ export class BasecampAPI {
 
   async uncompleteTodo(projectId: string, todoId: string) {
     return this.delete(`/${this.accountId}/buckets/${projectId}/todos/${todoId}/completion.json`);
+  }
+
+  async repositionTodo(projectId: string, todoId: string, position: number) {
+    return this.put(`/${this.accountId}/buckets/${projectId}/todos/${todoId}/position.json`, { position });
+  }
+
+  /* ===========================
+   * MESSAGE BOARDS & MESSAGES
+   * =========================== */
+
+  async getMessageBoard(projectId: string, messageBoardId: string) {
+    return this.get(`/${this.accountId}/buckets/${projectId}/message_boards/${messageBoardId}.json`);
+  }
+
+  async getMessages(projectId: string, messageBoardId: string, page = 1) {
+    return this.get(`/${this.accountId}/buckets/${projectId}/message_boards/${messageBoardId}/messages.json`, {
+      page: page.toString()
+    });
+  }
+
+  async getMessage(projectId: string, messageId: string) {
+    return this.get(`/${this.accountId}/buckets/${projectId}/messages/${messageId}.json`);
+  }
+
+  async createMessage(
+    projectId: string,
+    messageBoardId: string,
+    subject: string,
+    content: string,
+    options?: { status?: string; category_id?: string }
+  ) {
+    return this.post(`/${this.accountId}/buckets/${projectId}/message_boards/${messageBoardId}/messages.json`, {
+      subject,
+      content,
+      ...options
+    });
+  }
+
+  async updateMessage(projectId: string, messageId: string, subject?: string, content?: string) {
+    const data: any = {};
+    if (subject) data.subject = subject;
+    if (content) data.content = content;
+    return this.put(`/${this.accountId}/buckets/${projectId}/messages/${messageId}.json`, data);
+  }
+
+  /* ===========================
+   * VAULTS & DOCUMENTS
+   * =========================== */
+
+  async getVault(projectId: string, vaultId: string) {
+    return this.get(`/${this.accountId}/buckets/${projectId}/vaults/${vaultId}.json`);
+  }
+
+  async getDocuments(projectId: string, vaultId: string, page = 1) {
+    return this.get(`/${this.accountId}/buckets/${projectId}/vaults/${vaultId}/documents.json`, {
+      page: page.toString()
+    });
+  }
+
+  async getDocument(projectId: string, documentId: string) {
+    return this.get(`/${this.accountId}/buckets/${projectId}/documents/${documentId}.json`);
+  }
+
+  async createDocument(projectId: string, vaultId: string, title: string, content: string, status = 'active') {
+    return this.post(`/${this.accountId}/buckets/${projectId}/vaults/${vaultId}/documents.json`, {
+      title,
+      content,
+      status
+    });
+  }
+
+  async updateDocument(projectId: string, documentId: string, title?: string, content?: string) {
+    const data: any = {};
+    if (title) data.title = title;
+    if (content) data.content = content;
+    return this.put(`/${this.accountId}/buckets/${projectId}/documents/${documentId}.json`, data);
+  }
+
+  /* ===========================
+   * SCHEDULES & SCHEDULE ENTRIES
+   * =========================== */
+
+  async getSchedule(projectId: string, scheduleId: string) {
+    return this.get(`/${this.accountId}/buckets/${projectId}/schedules/${scheduleId}.json`);
+  }
+
+  async getScheduleEntries(projectId: string, scheduleId: string, status?: string, startDate?: string, endDate?: string, page = 1) {
+    const query: Record<string, string> = { page: page.toString() };
+    if (status) query.status = status;
+    if (startDate) query.start_date = startDate;
+    if (endDate) query.end_date = endDate;
+    return this.get(`/${this.accountId}/buckets/${projectId}/schedules/${scheduleId}/entries.json`, query);
+  }
+
+  async getScheduleEntry(projectId: string, entryId: string) {
+    return this.get(`/${this.accountId}/buckets/${projectId}/schedule_entries/${entryId}.json`);
+  }
+
+  async createScheduleEntry(
+    projectId: string,
+    scheduleId: string,
+    summary: string,
+    startsAt: string,
+    endsAt?: string,
+    options?: {
+      description?: string;
+      participant_ids?: number[];
+      all_day?: boolean;
+      notify?: boolean;
+    }
+  ) {
+    return this.post(`/${this.accountId}/buckets/${projectId}/schedules/${scheduleId}/entries.json`, {
+      summary,
+      starts_at: startsAt,
+      ends_at: endsAt,
+      ...options
+    });
+  }
+
+  async updateScheduleEntry(
+    projectId: string,
+    entryId: string,
+    updates: {
+      summary?: string;
+      starts_at?: string;
+      ends_at?: string;
+      description?: string;
+      participant_ids?: number[];
+      all_day?: boolean;
+    }
+  ) {
+    return this.put(`/${this.accountId}/buckets/${projectId}/schedule_entries/${entryId}.json`, updates);
+  }
+
+  /* ===========================
+   * CAMPFIRES (CHATS)
+   * =========================== */
+
+  async getCampfires() {
+    return this.get(`/${this.accountId}/chats.json`);
+  }
+
+  async getCampfire(projectId: string, campfireId: string) {
+    return this.get(`/${this.accountId}/buckets/${projectId}/chats/${campfireId}.json`);
+  }
+
+  async getCampfireLines(projectId: string, campfireId: string, page = 1) {
+    return this.get(`/${this.accountId}/buckets/${projectId}/chats/${campfireId}/lines.json`, {
+      page: page.toString()
+    });
+  }
+
+  async getCampfireLine(projectId: string, lineId: string) {
+    return this.get(`/${this.accountId}/buckets/${projectId}/chat_lines/${lineId}.json`);
+  }
+
+  async createCampfireLine(projectId: string, campfireId: string, content: string) {
+    return this.post(`/${this.accountId}/buckets/${projectId}/chats/${campfireId}/lines.json`, { content });
   }
 
   /* ===========================
