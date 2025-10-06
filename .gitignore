@@ -46,3 +46,6 @@ coverage/
 *.tmp
 *.temp
 .cache/
+
+# Index cache (auto-generated)
+index-cache.json

@@ -17,11 +17,13 @@ import {
   TextContent,
 } from '@modelcontextprotocol/sdk/types.js';
 import { BasecampAPI } from './basecamp-api.js';
+import { IndexManager } from './index-manager.js';
 import { tools } from './tools.js';
 
 export class BasecampMCPServer {
   private server: Server;
   private basecampApi: BasecampAPI;
+  private indexManager: IndexManager;
 
   constructor(accessToken: string, accountId?: string) {
     this.server = new Server(
@@ -37,6 +39,7 @@ export class BasecampMCPServer {
     );
 
     this.basecampApi = new BasecampAPI(accessToken, accountId);
+    this.indexManager = new IndexManager(this.basecampApi);
     this.setupToolHandlers();
   }
 
@@ -176,6 +179,22 @@ export class BasecampMCPServer {
             return await this.listCampfireLines(toolArgs.project_id, toolArgs.campfire_id);
           case 'basecamp_create_campfire_line':
             return await this.createCampfireLine(toolArgs.project_id, toolArgs.campfire_id, toolArgs.content);
+
+          // Index Management
+          case 'basecamp_index_build':
+            return await this.buildIndex();
+          case 'basecamp_index_update_project':
+            return await this.updateProjectIndex(toolArgs.project_id);
+          case 'basecamp_index_search':
+            return await this.searchIndex(toolArgs.query);
+          case 'basecamp_index_get_project':
+            return await this.getProjectFromIndex(toolArgs.project_id);
+          case 'basecamp_index_find_column':
+            return await this.findColumnInIndex(toolArgs.project_id, toolArgs.column_name);
+          case 'basecamp_index_get_columns':
+            return await this.getColumnsFromIndex(toolArgs.project_id);
+          case 'basecamp_index_stats':
+            return await this.getIndexStats();
 
           // Search & Utility
           case 'basecamp_find_project':
@@ -993,6 +1012,146 @@ export class BasecampMCPServer {
         {
           type: 'text',
           text: JSON.stringify(response.data, null, 2),
+        },
+      ],
+    };
+  }
+
+  /* ===========================
+   * INDEX MANAGEMENT HANDLERS
+   * =========================== */
+
+  private async buildIndex(): Promise<CallToolResult> {
+    const index = await this.indexManager.buildFullIndex();
+    const stats = await this.indexManager.getStats();
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `✅ Index built successfully!\n\nStats:\n${JSON.stringify(stats, null, 2)}`,
+        },
+      ],
+    };
+  }
+
+  private async updateProjectIndex(projectId: string): Promise<CallToolResult> {
+    const projectIndex = await this.indexManager.updateProjectIndex(projectId);
+
+    if (!projectIndex) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `❌ Failed to update project ${projectId}`,
+          },
+        ],
+      };
+    }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `✅ Project updated in index:\n${JSON.stringify(projectIndex, null, 2)}`,
+        },
+      ],
+    };
+  }
+
+  private async searchIndex(query: string): Promise<CallToolResult> {
+    const results = await this.indexManager.searchProjects(query);
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Found ${results.length} project(s):\n\n${JSON.stringify(results, null, 2)}`,
+        },
+      ],
+    };
+  }
+
+  private async getProjectFromIndex(projectId: string): Promise<CallToolResult> {
+    const project = await this.indexManager.getProject(projectId);
+
+    if (!project) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `❌ Project ${projectId} not found in index. Run basecamp_index_build first.`,
+          },
+        ],
+      };
+    }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(project, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async findColumnInIndex(projectId: string, columnName: string): Promise<CallToolResult> {
+    const column = await this.indexManager.findColumn(projectId, columnName);
+
+    if (!column) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `❌ Column "${columnName}" not found in project ${projectId}`,
+          },
+        ],
+      };
+    }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Found column:\n${JSON.stringify(column, null, 2)}`,
+        },
+      ],
+    };
+  }
+
+  private async getColumnsFromIndex(projectId: string): Promise<CallToolResult> {
+    const columns = await this.indexManager.getProjectColumns(projectId);
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Found ${columns.length} column(s):\n\n${JSON.stringify(columns, null, 2)}`,
+        },
+      ],
+    };
+  }
+
+  private async getIndexStats(): Promise<CallToolResult> {
+    const stats = await this.indexManager.getStats();
+
+    if (!stats) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: '❌ Index not built yet. Run basecamp_index_build first.',
+          },
+        ],
+      };
+    }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `📊 Index Statistics:\n\n${JSON.stringify(stats, null, 2)}`,
         },
       ],
     };

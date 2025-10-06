@@ -817,6 +817,84 @@ export const tools: Tool[] = [
   },
 
   /* ===========================
+   * INDEX MANAGEMENT
+   * =========================== */
+  {
+    name: 'basecamp_index_build',
+    description: 'Build full index of all projects, card tables, and columns for fast lookups',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'basecamp_index_update_project',
+    description: 'Update index for a specific project',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string', description: 'Project ID to update in index' }
+      },
+      required: ['project_id']
+    }
+  },
+  {
+    name: 'basecamp_index_search',
+    description: 'Search projects by name in the index (fast lookup)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Search query (fuzzy match on project name)' }
+      },
+      required: ['query']
+    }
+  },
+  {
+    name: 'basecamp_index_get_project',
+    description: 'Get project details from index (project ID, card tables, columns)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string', description: 'Project ID' }
+      },
+      required: ['project_id']
+    }
+  },
+  {
+    name: 'basecamp_index_find_column',
+    description: 'Find a column by name within a project (fast lookup)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string', description: 'Project ID' },
+        column_name: { type: 'string', description: 'Column name to search for (fuzzy match)' }
+      },
+      required: ['project_id', 'column_name']
+    }
+  },
+  {
+    name: 'basecamp_index_get_columns',
+    description: 'Get all columns for a project from index',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string', description: 'Project ID' }
+      },
+      required: ['project_id']
+    }
+  },
+  {
+    name: 'basecamp_index_stats',
+    description: 'Get index statistics (total projects, columns, last update time)',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
+  },
+
+  /* ===========================
    * UTILITY
    * =========================== */
   {
