@@ -1,7 +1,5 @@
 /**
  * Comprehensive Basecamp API Client for TypeScript
- * Ported from WordPress Basecamp Pro Automation Suite
- *
  * Full API coverage based on: https://github.com/basecamp/bc3-api
  *
  * @author Varun Dubey (vapvarun) <varun@wbcomdesigns.com>

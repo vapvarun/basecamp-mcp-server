@@ -2,11 +2,11 @@
 
 ## ✅ Setup Complete!
 
-Your Basecamp MCP Server is now installed and configured with your existing WordPress credentials.
+Your Basecamp MCP Server is now installed and configured with your Basecamp credentials.
 
 ### What's Been Done:
 
-1. ✅ **Tokens Extracted** - Access tokens retrieved from WordPress database
+1. ✅ **Credentials Configured** - Access tokens and account ID set up
 2. ✅ **Server Built** - TypeScript compiled to JavaScript
 3. ✅ **Claude Desktop Configured** - MCP server added to Claude Desktop
 4. ✅ **Ready to Use** - All 40+ Basecamp tools are now available
@@ -171,7 +171,6 @@ tail -f ~/Library/Logs/Claude/mcp*.log
 ## 📚 Documentation
 
 - **README:** Full documentation in `README.md`
-- **Conversion Guide:** See `CONVERSION_GUIDE.md` for WordPress → MCP mapping
 - **Basecamp API:** https://github.com/basecamp/bc3-api
 
 ## 🎉 You're All Set!
@@ -180,4 +179,4 @@ Your Basecamp MCP server is ready to use. Just restart Claude Desktop and start 
 
 ---
 
-**Need help?** Check the README.md or CONVERSION_GUIDE.md for detailed information.
+**Need help?** Check the README.md for detailed information.

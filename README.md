@@ -34,7 +34,7 @@ cp config.example.json config.json
 - Track events and activity
 
 ✅ **40+ MCP Tools Available**
-- All WordPress WP-CLI commands converted to MCP tools
+- Complete Basecamp API integration via MCP tools
 - Full CRUD operations for all Basecamp resources
 - Search and utility functions
 
@@ -103,7 +103,7 @@ From your app page, note down:
 
 ### Step 3: Get Access Token
 
-You can use the included WordPress plugin to get an access token via OAuth, or implement your own OAuth flow:
+Implement OAuth flow to get your access token:
 
 ```typescript
 import { BasecampAPI } from './src/basecamp-api.js';
@@ -317,24 +317,12 @@ basecamp-mcp-server/
 
 ## Architecture
 
-### From WordPress Plugin to MCP Server
-
-The conversion maps WordPress/PHP concepts to MCP/TypeScript:
-
-| WordPress Plugin | MCP Server |
-|-----------------|------------|
-| WP-CLI Commands | MCP Tools |
-| PHP Classes | TypeScript Classes |
-| WordPress Options | Config File / Env Vars |
-| AJAX Endpoints | Tool Handlers |
-| wp_remote_* | fetch API |
-
 ### Key Components
 
 1. **BasecampAPI** (`basecamp-api.ts`)
    - Complete Basecamp API v3 client
-   - Ported from PHP `class-basecamp-api.php`
    - Handles OAuth and all API endpoints
+   - Full TypeScript implementation
 
 2. **BasecampMCPServer** (`server.ts`)
    - Implements MCP protocol
@@ -343,7 +331,6 @@ The conversion maps WordPress/PHP concepts to MCP/TypeScript:
 
 3. **Tools** (`tools.ts`)
    - Defines all available MCP tools
-   - Based on WP-CLI command structure
    - Includes input schemas and descriptions
 
 4. **Config** (`config.ts`)
@@ -381,16 +368,19 @@ Full Basecamp API documentation: [https://github.com/basecamp/bc3-api](https://g
 
 ## Contributing
 
-This MCP server is converted from the Basecamp Pro Automation Suite WordPress plugin. To contribute:
+Contributions are welcome! To contribute:
 
-1. Make changes in the appropriate files
-2. Build: `npm run build`
-3. Test with MCP Inspector
-4. Submit a pull request
+1. Fork the repository
+2. Make changes in the appropriate files
+3. Build: `npm run build`
+4. Test with MCP Inspector
+5. Submit a pull request
+
+For detailed guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## License
 
-GPL v2 or later (same as the original WordPress plugin)
+GPL v2 or later
 
 ## Credits & Author
 
