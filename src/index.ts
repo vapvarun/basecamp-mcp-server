@@ -3,6 +3,11 @@
 /**
  * Basecamp MCP Server - Entry Point
  * Handles initialization and starts the MCP server
+ *
+ * @author Varun Dubey (vapvarun) <varun@wbcomdesigns.com>
+ * @company Wbcom Designs
+ * @license GPL-2.0-or-later
+ * @link https://github.com/vapvarun/basecamp-mcp-server
  */
 
 import { BasecampMCPServer } from './server.js';

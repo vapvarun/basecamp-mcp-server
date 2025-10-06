@@ -1,7 +1,7 @@
 {
   "name": "basecamp-mcp-server",
   "version": "1.0.0",
-  "description": "MCP server for Basecamp Pro Automation Suite - Complete Basecamp API integration",
+  "description": "MCP server for Basecamp Pro Automation Suite - Complete Basecamp API integration for Claude AI",
   "type": "module",
   "main": "build/index.js",
   "bin": {
@@ -11,16 +11,39 @@
     "build": "tsc && chmod +x build/index.js",
     "start": "node build/index.js",
     "dev": "tsc --watch",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "test": "echo \"Tests coming soon\" && exit 0"
   },
   "keywords": [
     "mcp",
     "basecamp",
     "automation",
     "model-context-protocol",
-    "claude"
+    "claude",
+    "ai",
+    "project-management",
+    "basecamp-api",
+    "wbcom-designs"
   ],
-  "author": "Wbcom Designs",
+  "author": {
+    "name": "Varun Dubey (vapvarun)",
+    "email": "varun@wbcomdesigns.com",
+    "url": "https://wbcomdesigns.com"
+  },
+  "contributors": [
+    {
+      "name": "Wbcom Designs",
+      "url": "https://wbcomdesigns.com"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vapvarun/basecamp-mcp-server.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vapvarun/basecamp-mcp-server/issues"
+  },
+  "homepage": "https://github.com/vapvarun/basecamp-mcp-server#readme",
   "license": "GPL-2.0-or-later",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^0.5.0",

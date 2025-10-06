@@ -1,6 +1,11 @@
 /**
  * Configuration Management for Basecamp MCP Server
  * Handles loading credentials from environment or config file
+ *
+ * @author Varun Dubey (vapvarun) <varun@wbcomdesigns.com>
+ * @company Wbcom Designs
+ * @license GPL-2.0-or-later
+ * @link https://github.com/vapvarun/basecamp-mcp-server
  */
 
 import * as fs from 'fs';

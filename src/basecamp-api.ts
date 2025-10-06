@@ -3,6 +3,11 @@
  * Ported from WordPress Basecamp Pro Automation Suite
  *
  * Full API coverage based on: https://github.com/basecamp/bc3-api
+ *
+ * @author Varun Dubey (vapvarun) <varun@wbcomdesigns.com>
+ * @company Wbcom Designs
+ * @license GPL-2.0-or-later
+ * @link https://github.com/vapvarun/basecamp-mcp-server
  */
 
 interface BasecampResponse<T = any> {

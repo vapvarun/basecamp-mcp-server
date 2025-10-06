@@ -1,6 +1,11 @@
 /**
  * Basecamp MCP Server - Main Implementation
  * Handles all tool calls and routes them to the Basecamp API
+ *
+ * @author Varun Dubey (vapvarun) <varun@wbcomdesigns.com>
+ * @company Wbcom Designs
+ * @license GPL-2.0-or-later
+ * @link https://github.com/vapvarun/basecamp-mcp-server
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';

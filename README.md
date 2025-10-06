@@ -1,8 +1,27 @@
 # Basecamp MCP Server
 
+[![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue)](https://www.typescriptlang.org/)
+[![MCP](https://img.shields.io/badge/MCP-0.5.0-purple)](https://github.com/modelcontextprotocol)
+
 A Model Context Protocol (MCP) server for complete Basecamp automation. This server allows AI assistants like Claude to interact with Basecamp projects, cards, todos, comments, and more.
 
-**Converted from:** [Basecamp Pro Automation Suite WordPress Plugin](../wp-content/plugins/basecamp-cards-reader/)
+**Author:** [Varun Dubey (vapvarun)](https://github.com/vapvarun) | **Company:** [Wbcom Designs](https://wbcomdesigns.com)
+
+## ⚠️ Important: Setup Required
+
+**If you cloned this from GitHub**, you need to create your `config.json` file:
+
+```bash
+# 1. Copy the example config
+cp config.example.json config.json
+
+# 2. Edit config.json and add your Basecamp credentials
+# (See "Getting Basecamp Credentials" section below)
+```
+
+**Note:** `config.json` is gitignored and will never be committed to keep your credentials safe.
 
 ## Features
 
@@ -373,21 +392,36 @@ This MCP server is converted from the Basecamp Pro Automation Suite WordPress pl
 
 GPL v2 or later (same as the original WordPress plugin)
 
-## Credits
+## Credits & Author
 
-- **Original WordPress Plugin:** Basecamp Pro Automation Suite by Wbcom Designs
-- **MCP Conversion:** Maintains all functionality from the WordPress plugin
+**Created by:** [Varun Dubey (vapvarun)](https://github.com/vapvarun)
+**Company:** [Wbcom Designs](https://wbcomdesigns.com)
+**Email:** varun@wbcomdesigns.com
+
+### Acknowledgments
+
 - **Basecamp API:** [Basecamp 3 API by 37signals](https://github.com/basecamp/bc3-api)
+- **MCP Protocol:** [Model Context Protocol by Anthropic](https://github.com/modelcontextprotocol)
 
 ## Support
 
 For issues related to:
-- **MCP Server:** Open an issue in this repository
+- **MCP Server:** [Open an issue on GitHub](https://github.com/vapvarun/basecamp-mcp-server/issues)
 - **Basecamp API:** Check [Basecamp API documentation](https://github.com/basecamp/bc3-api)
 - **Claude Desktop:** Check [Anthropic MCP documentation](https://github.com/modelcontextprotocol)
 
+### Professional Support
+
+For professional support, custom development, or enterprise solutions:
+- **Website:** [https://wbcomdesigns.com](https://wbcomdesigns.com)
+- **Email:** varun@wbcomdesigns.com
+
 ## Related Projects
 
-- [Original WordPress Plugin](../wp-content/plugins/basecamp-cards-reader/)
 - [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol)
 - [Basecamp API](https://github.com/basecamp/bc3-api)
+- [Anthropic Claude](https://www.anthropic.com/claude)
+
+---
+
+**Made with ❤️ by [Varun Dubey](https://github.com/vapvarun) at [Wbcom Designs](https://wbcomdesigns.com)**

@@ -1,6 +1,11 @@
 /**
  * MCP Tools Definitions for Basecamp Pro Automation Suite
  * Maps all WP-CLI commands to MCP tools
+ *
+ * @author Varun Dubey (vapvarun) <varun@wbcomdesigns.com>
+ * @company Wbcom Designs
+ * @license GPL-2.0-or-later
+ * @link https://github.com/vapvarun/basecamp-mcp-server
  */
 
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
