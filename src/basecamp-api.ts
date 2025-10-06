@@ -258,7 +258,7 @@ export class BasecampAPI {
 
   async getCards(projectId: string, columnId: string, page = 1) {
     return this.get(
-      `/${this.accountId}/buckets/${projectId}/card_tables/columns/${columnId}/cards.json`,
+      `/${this.accountId}/buckets/${projectId}/card_tables/lists/${columnId}/cards.json`,
       { page: page.toString() }
     );
   }
