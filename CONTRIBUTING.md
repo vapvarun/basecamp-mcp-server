@@ -120,7 +120,6 @@ When adding new features:
 - Update `README.md` with usage examples
 - Add tool descriptions to `src/tools.ts`
 - Document any new configuration options
-- Update `CONVERSION_GUIDE.md` if needed
 
 ## 🔒 Security
 
