@@ -1,0 +1,7 @@
+{
+  "accessToken": "YOUR_BASECAMP_ACCESS_TOKEN_HERE",
+  "accountId": "YOUR_ACCOUNT_ID (optional - will auto-detect)",
+  "refreshToken": "YOUR_REFRESH_TOKEN (optional)",
+  "clientId": "YOUR_OAUTH_CLIENT_ID (optional)",
+  "clientSecret": "YOUR_OAUTH_CLIENT_SECRET (optional)"
+}
