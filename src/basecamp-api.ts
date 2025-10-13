@@ -280,7 +280,7 @@ export class BasecampAPI {
     if (assigneeIds.length > 0) data.assignee_ids = assigneeIds;
 
     return this.post(
-      `/${this.accountId}/buckets/${projectId}/card_tables/columns/${columnId}/cards.json`,
+      `/${this.accountId}/buckets/${projectId}/card_tables/lists/${columnId}/cards.json`,
       data
     );
   }
