@@ -19,6 +19,8 @@ import {
 import { BasecampAPI } from './basecamp-api.js';
 import { IndexManager } from './index-manager.js';
 import { tools } from './tools.js';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export class BasecampMCPServer {
   private server: Server;
@@ -62,7 +64,11 @@ export class BasecampMCPServer {
           case 'basecamp_read':
             return await this.readCard(toolArgs.url, toolArgs.include_comments, toolArgs.include_images);
           case 'basecamp_comment':
-            return await this.postComment(toolArgs.url, toolArgs.comment);
+            return await this.postComment(toolArgs.url, toolArgs.comment, toolArgs.attachment_sgids);
+          case 'basecamp_upload_attachment':
+            return await this.uploadAttachment(toolArgs.file_path, toolArgs.file_name, toolArgs.caption);
+          case 'basecamp_comment_with_file':
+            return await this.commentWithFile(toolArgs.url, toolArgs.comment, toolArgs.file_path, toolArgs.caption);
 
           // Project Management
           case 'basecamp_list_projects':
@@ -146,7 +152,7 @@ export class BasecampMCPServer {
           case 'basecamp_get_message':
             return await this.getMessage(toolArgs.project_id, toolArgs.message_id);
           case 'basecamp_create_message':
-            return await this.createMessage(toolArgs.project_id, toolArgs.message_board_id, toolArgs.subject, toolArgs.content);
+            return await this.createMessage(toolArgs.project_id, toolArgs.message_board_id, toolArgs.subject, toolArgs.content, toolArgs.attachment_sgids);
           case 'basecamp_update_message':
             return await this.updateMessage(toolArgs.project_id, toolArgs.message_id, toolArgs.subject, toolArgs.content);
 
@@ -178,7 +184,7 @@ export class BasecampMCPServer {
           case 'basecamp_list_campfire_lines':
             return await this.listCampfireLines(toolArgs.project_id, toolArgs.campfire_id);
           case 'basecamp_create_campfire_line':
-            return await this.createCampfireLine(toolArgs.project_id, toolArgs.campfire_id, toolArgs.content);
+            return await this.createCampfireLine(toolArgs.project_id, toolArgs.campfire_id, toolArgs.content, toolArgs.attachment_sgids);
 
           // Index Management
           case 'basecamp_index_build':
@@ -288,26 +294,171 @@ export class BasecampMCPServer {
     return images;
   }
 
-  private async postComment(url: string, comment: string): Promise<CallToolResult> {
+  private async postComment(url: string, comment: string, attachmentSgids?: string[]): Promise<CallToolResult> {
     const parsed = BasecampAPI.parseUrl(url);
     if (!parsed || !parsed.recordingId) {
       throw new Error('Invalid Basecamp URL');
     }
 
     await this.basecampApi.getAccountId();
-    const response = await this.basecampApi.createComment(parsed.projectId, parsed.recordingId, comment);
+
+    // Append attachment tags if provided
+    let commentContent = comment;
+    if (attachmentSgids && attachmentSgids.length > 0) {
+      const attachmentTags = attachmentSgids
+        .map(sgid => BasecampAPI.createAttachmentTag(sgid))
+        .join('\n');
+      commentContent = `${comment}\n\n${attachmentTags}`;
+    }
+
+    const response = await this.basecampApi.createComment(parsed.projectId, parsed.recordingId, commentContent);
 
     if (response.code === 201) {
+      const attachmentCount = attachmentSgids?.length || 0;
+      const attachmentMsg = attachmentCount > 0 ? ` with ${attachmentCount} attachment(s)` : '';
       return {
         content: [
           {
             type: 'text',
-            text: 'Comment posted successfully',
+            text: `Comment posted successfully${attachmentMsg}`,
           },
         ],
       };
     } else {
       throw new Error(`Failed to post comment: ${response.data?.error || 'Unknown error'}`);
+    }
+  }
+
+  private async uploadAttachment(filePath: string, fileName?: string, caption?: string): Promise<CallToolResult> {
+    // Verify file exists
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`File not found: ${filePath}`);
+    }
+
+    // Read file
+    const fileData = fs.readFileSync(filePath);
+    const actualFileName = fileName || path.basename(filePath);
+
+    // Determine content type from extension
+    const ext = path.extname(filePath).toLowerCase();
+    const contentTypeMap: Record<string, string> = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp',
+      '.pdf': 'application/pdf',
+      '.doc': 'application/msword',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.xls': 'application/vnd.ms-excel',
+      '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      '.mp4': 'video/mp4',
+      '.webm': 'video/webm',
+      '.mov': 'video/quicktime',
+      '.avi': 'video/x-msvideo',
+      '.mp3': 'audio/mpeg',
+      '.wav': 'audio/wav',
+      '.txt': 'text/plain',
+      '.html': 'text/html',
+      '.css': 'text/css',
+      '.js': 'application/javascript',
+      '.json': 'application/json',
+      '.zip': 'application/zip',
+    };
+
+    const contentType = contentTypeMap[ext] || 'application/octet-stream';
+
+    await this.basecampApi.getAccountId();
+    const response = await this.basecampApi.uploadAttachment(fileData, actualFileName, contentType);
+
+    if (response.error) {
+      throw new Error(`Failed to upload attachment: ${response.message}`);
+    }
+
+    if (response.code === 200 || response.code === 201) {
+      const sgid = response.data?.attachable_sgid;
+      if (!sgid) {
+        throw new Error('Upload succeeded but no attachable_sgid returned');
+      }
+
+      // Create the attachment tag for easy copy/paste
+      const attachmentTag = BasecampAPI.createAttachmentTag(sgid, caption);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              attachable_sgid: sgid,
+              file_name: actualFileName,
+              content_type: contentType,
+              file_size: fileData.length,
+              attachment_tag: attachmentTag,
+              usage: 'Use the attachable_sgid with basecamp_comment tool, or embed attachment_tag directly in rich text content'
+            }, null, 2),
+          },
+        ],
+      };
+    } else {
+      throw new Error(`Failed to upload: HTTP ${response.code}`);
+    }
+  }
+
+  private async commentWithFile(url: string, comment: string, filePath: string, caption?: string): Promise<CallToolResult> {
+    // Step 1: Upload the file
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`File not found: ${filePath}`);
+    }
+
+    const fileData = fs.readFileSync(filePath);
+    const fileName = path.basename(filePath);
+    const ext = path.extname(filePath).toLowerCase();
+
+    const contentTypeMap: Record<string, string> = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp',
+      '.pdf': 'application/pdf',
+      '.mp4': 'video/mp4',
+      '.webm': 'video/webm',
+      '.mov': 'video/quicktime',
+    };
+    const contentType = contentTypeMap[ext] || 'application/octet-stream';
+
+    await this.basecampApi.getAccountId();
+    const uploadResponse = await this.basecampApi.uploadAttachment(fileData, fileName, contentType);
+
+    if (uploadResponse.error || !uploadResponse.data?.attachable_sgid) {
+      throw new Error(`Failed to upload file: ${uploadResponse.message || 'Unknown error'}`);
+    }
+
+    const sgid = uploadResponse.data.attachable_sgid;
+
+    // Step 2: Post comment with the attachment
+    const parsed = BasecampAPI.parseUrl(url);
+    if (!parsed || !parsed.recordingId) {
+      throw new Error('Invalid Basecamp URL');
+    }
+
+    const attachmentTag = BasecampAPI.createAttachmentTag(sgid, caption);
+    const commentContent = `${comment}\n\n${attachmentTag}`;
+
+    const commentResponse = await this.basecampApi.createComment(parsed.projectId, parsed.recordingId, commentContent);
+
+    if (commentResponse.code === 201) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Comment posted with attachment: ${fileName}`,
+          },
+        ],
+      };
+    } else {
+      throw new Error(`Failed to post comment: ${commentResponse.data?.error || 'Unknown error'}`);
     }
   }
 
@@ -425,20 +576,33 @@ export class BasecampMCPServer {
 
   private async createCard(args: any): Promise<CallToolResult> {
     await this.basecampApi.getAccountId();
+
+    // Append attachment tags to content if provided
+    let cardContent = args.content || '';
+    if (args.attachment_sgids && args.attachment_sgids.length > 0) {
+      const attachmentTags = args.attachment_sgids
+        .map((sgid: string) => BasecampAPI.createAttachmentTag(sgid))
+        .join('\n');
+      cardContent = cardContent ? `${cardContent}\n\n${attachmentTags}` : attachmentTags;
+    }
+
     const response = await this.basecampApi.createCard(
       args.project_id,
       args.column_id,
       args.title,
-      args.content || '',
+      cardContent,
       args.due_on,
       args.assignee_ids || []
     );
+
+    const attachmentCount = args.attachment_sgids?.length || 0;
+    const attachmentMsg = attachmentCount > 0 ? ` with ${attachmentCount} attachment(s)` : '';
 
     return {
       content: [
         {
           type: 'text',
-          text: `Card created: ${response.data?.title} (ID: ${response.data?.id})`,
+          text: `Card created: ${response.data?.title} (ID: ${response.data?.id})${attachmentMsg}`,
         },
       ],
     };
@@ -448,18 +612,32 @@ export class BasecampMCPServer {
     await this.basecampApi.getAccountId();
     const updates: any = {};
     if (args.title) updates.title = args.title;
-    if (args.content) updates.content = args.content;
     if (args.due_on) updates.due_on = args.due_on;
     if (args.assignee_ids) updates.assignee_ids = args.assignee_ids;
     if (args.completed !== undefined) updates.completed = args.completed;
 
+    // Handle content with optional attachments
+    let cardContent = args.content || '';
+    if (args.attachment_sgids && args.attachment_sgids.length > 0) {
+      const attachmentTags = args.attachment_sgids
+        .map((sgid: string) => BasecampAPI.createAttachmentTag(sgid))
+        .join('\n');
+      cardContent = cardContent ? `${cardContent}\n\n${attachmentTags}` : attachmentTags;
+    }
+    if (cardContent || args.content !== undefined) {
+      updates.content = cardContent;
+    }
+
     const response = await this.basecampApi.updateCard(args.project_id, args.card_id, updates);
+
+    const attachmentCount = args.attachment_sgids?.length || 0;
+    const attachmentMsg = attachmentCount > 0 ? ` with ${attachmentCount} attachment(s)` : '';
 
     return {
       content: [
         {
           type: 'text',
-          text: `Card updated successfully`,
+          text: `Card updated successfully${attachmentMsg}`,
         },
       ],
     };
@@ -828,13 +1006,26 @@ export class BasecampMCPServer {
     };
   }
 
-  private async createMessage(projectId: string, messageBoardId: string, subject: string, content: string): Promise<CallToolResult> {
-    const response = await this.basecampApi.createMessage(projectId, messageBoardId, subject, content);
+  private async createMessage(projectId: string, messageBoardId: string, subject: string, content: string, attachmentSgids?: string[]): Promise<CallToolResult> {
+    // Append attachment tags to content if provided
+    let messageContent = content;
+    if (attachmentSgids && attachmentSgids.length > 0) {
+      const attachmentTags = attachmentSgids
+        .map(sgid => BasecampAPI.createAttachmentTag(sgid))
+        .join('\n');
+      messageContent = `${content}\n\n${attachmentTags}`;
+    }
+
+    const response = await this.basecampApi.createMessage(projectId, messageBoardId, subject, messageContent);
+
+    const attachmentCount = attachmentSgids?.length || 0;
+    const attachmentMsg = attachmentCount > 0 ? ` with ${attachmentCount} attachment(s)` : '';
+
     return {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(response.data, null, 2),
+          text: `Message created${attachmentMsg}: ${response.data?.subject || subject}`,
         },
       ],
     };
@@ -1005,13 +1196,26 @@ export class BasecampMCPServer {
     };
   }
 
-  private async createCampfireLine(projectId: string, campfireId: string, content: string): Promise<CallToolResult> {
-    const response = await this.basecampApi.createCampfireLine(projectId, campfireId, content);
+  private async createCampfireLine(projectId: string, campfireId: string, content: string, attachmentSgids?: string[]): Promise<CallToolResult> {
+    // Append attachment tags to content if provided
+    let messageContent = content;
+    if (attachmentSgids && attachmentSgids.length > 0) {
+      const attachmentTags = attachmentSgids
+        .map(sgid => BasecampAPI.createAttachmentTag(sgid))
+        .join('\n');
+      messageContent = `${content}\n\n${attachmentTags}`;
+    }
+
+    const response = await this.basecampApi.createCampfireLine(projectId, campfireId, messageContent);
+
+    const attachmentCount = attachmentSgids?.length || 0;
+    const attachmentMsg = attachmentCount > 0 ? ` with ${attachmentCount} attachment(s)` : '';
+
     return {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(response.data, null, 2),
+          text: `Chat message sent${attachmentMsg}`,
         },
       ],
     };

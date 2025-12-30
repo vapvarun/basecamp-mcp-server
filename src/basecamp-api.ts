@@ -644,6 +644,64 @@ export class BasecampAPI {
   }
 
   /* ===========================
+   * ATTACHMENTS
+   * =========================== */
+
+  /**
+   * Upload a file attachment to Basecamp
+   * Returns an attachable_sgid that can be used in rich text content
+   *
+   * @param filePath - Path to the file to upload
+   * @param fileName - Name for the uploaded file
+   * @param contentType - MIME type of the file (e.g., 'image/png', 'video/mp4')
+   */
+  async uploadAttachment(fileData: Buffer, fileName: string, contentType: string): Promise<BasecampResponse<{ attachable_sgid: string }>> {
+    const url = `${BasecampAPI.API_BASE}/${this.accountId}/attachments.json?name=${encodeURIComponent(fileName)}`;
+
+    try {
+      // Convert Buffer to Uint8Array for fetch compatibility
+      const bodyData = new Uint8Array(fileData);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'User-Agent': this.userAgent,
+          'Content-Type': contentType,
+          'Content-Length': fileData.length.toString()
+        },
+        body: bodyData
+      });
+
+      const responseData = await response.json().catch(() => ({}));
+
+      return {
+        code: response.status,
+        data: responseData,
+        headers: Object.fromEntries(response.headers.entries())
+      };
+    } catch (error) {
+      return {
+        code: 0,
+        data: { attachable_sgid: '' },
+        headers: {},
+        error: true,
+        message: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Helper to create bc-attachment HTML tag for rich text
+   */
+  static createAttachmentTag(sgid: string, caption?: string): string {
+    if (caption) {
+      return `<bc-attachment sgid="${sgid}" caption="${caption}"></bc-attachment>`;
+    }
+    return `<bc-attachment sgid="${sgid}"></bc-attachment>`;
+  }
+
+  /* ===========================
    * HELPER METHODS
    * =========================== */
 

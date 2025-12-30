@@ -40,7 +40,7 @@ export const tools: Tool[] = [
   },
   {
     name: 'basecamp_comment',
-    description: 'Post a comment to any Basecamp card or todo',
+    description: 'Post a comment to any Basecamp card or todo. Can include attachments by providing attachment_sgids.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -51,9 +51,62 @@ export const tools: Tool[] = [
         comment: {
           type: 'string',
           description: 'Comment text (supports HTML formatting)'
+        },
+        attachment_sgids: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of attachment SGIDs to embed in the comment (from basecamp_upload_attachment)'
         }
       },
       required: ['url', 'comment']
+    }
+  },
+  {
+    name: 'basecamp_upload_attachment',
+    description: 'Upload a file (image, video, document) to Basecamp. Returns an attachable_sgid that can be used in comments, messages, or any rich text content.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        file_path: {
+          type: 'string',
+          description: 'Absolute path to the file to upload'
+        },
+        file_name: {
+          type: 'string',
+          description: 'Name for the uploaded file (optional, defaults to original filename)'
+        },
+        caption: {
+          type: 'string',
+          description: 'Optional caption for the attachment (shown below images)'
+        }
+      },
+      required: ['file_path']
+    }
+  },
+  {
+    name: 'basecamp_comment_with_file',
+    description: 'Post a comment with an attached file (image, video, document) to any Basecamp card or todo. Automatically uploads the file and embeds it in one step.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: {
+          type: 'string',
+          description: 'Basecamp card or todo URL'
+        },
+        comment: {
+          type: 'string',
+          description: 'Comment text (supports HTML formatting)'
+        },
+        file_path: {
+          type: 'string',
+          description: 'Absolute path to the file to attach (image, video, etc.)'
+        },
+        caption: {
+          type: 'string',
+          description: 'Optional caption for the attachment'
+        }
+      },
+      required: ['url', 'comment', 'file_path']
     }
   },
 
@@ -172,7 +225,7 @@ export const tools: Tool[] = [
   },
   {
     name: 'basecamp_create_card',
-    description: 'Create a new card in a specific column',
+    description: 'Create a new card in a specific column. Can include attachments by providing attachment_sgids.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -200,6 +253,11 @@ export const tools: Tool[] = [
           type: 'array',
           items: { type: 'number' },
           description: 'Array of person IDs to assign'
+        },
+        attachment_sgids: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of attachment SGIDs to embed in the card content (from basecamp_upload_attachment)'
         }
       },
       required: ['project_id', 'column_id', 'title']
@@ -207,7 +265,7 @@ export const tools: Tool[] = [
   },
   {
     name: 'basecamp_update_card',
-    description: 'Update an existing card (title, content, assignees, due date, completion)',
+    description: 'Update an existing card (title, content, assignees, due date, completion). Can include attachments.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -217,7 +275,12 @@ export const tools: Tool[] = [
         content: { type: 'string' },
         due_on: { type: 'string' },
         assignee_ids: { type: 'array', items: { type: 'number' } },
-        completed: { type: 'boolean' }
+        completed: { type: 'boolean' },
+        attachment_sgids: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of attachment SGIDs to append to content (from basecamp_upload_attachment)'
+        }
       },
       required: ['project_id', 'card_id']
     }
@@ -616,14 +679,19 @@ export const tools: Tool[] = [
   },
   {
     name: 'basecamp_create_message',
-    description: 'Post a new message/announcement to the message board',
+    description: 'Post a new message/announcement to the message board. Can include images and videos.',
     inputSchema: {
       type: 'object',
       properties: {
         project_id: { type: 'string' },
         message_board_id: { type: 'string' },
         subject: { type: 'string', description: 'Message subject/title' },
-        content: { type: 'string', description: 'Message content (supports HTML)' }
+        content: { type: 'string', description: 'Message content (supports HTML)' },
+        attachment_sgids: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of attachment SGIDs to embed in the message (from basecamp_upload_attachment)'
+        }
       },
       required: ['project_id', 'message_board_id', 'subject', 'content']
     }
@@ -804,13 +872,18 @@ export const tools: Tool[] = [
   },
   {
     name: 'basecamp_create_campfire_line',
-    description: 'Post a new message to a Campfire chat',
+    description: 'Post a new message to a Campfire chat. Can include images and videos.',
     inputSchema: {
       type: 'object',
       properties: {
         project_id: { type: 'string' },
         campfire_id: { type: 'string' },
-        content: { type: 'string', description: 'Chat message content' }
+        content: { type: 'string', description: 'Chat message content' },
+        attachment_sgids: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of attachment SGIDs to embed in the chat message (from basecamp_upload_attachment)'
+        }
       },
       required: ['project_id', 'campfire_id', 'content']
     }
