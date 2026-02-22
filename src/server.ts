@@ -85,6 +85,12 @@ export class BasecampMCPServer {
           // Card Table Operations
           case 'basecamp_list_columns':
             return await this.listColumns(toolArgs.project_id, toolArgs.table_id);
+          case 'basecamp_get_column':
+            return await this.getColumn(toolArgs.project_id, toolArgs.column_id);
+          case 'basecamp_create_column':
+            return await this.createColumn(toolArgs.project_id, toolArgs.card_table_id, toolArgs.title, toolArgs.description);
+          case 'basecamp_update_column':
+            return await this.updateColumn(toolArgs.project_id, toolArgs.column_id, toolArgs.title, toolArgs.description);
           case 'basecamp_list_cards':
             return await this.listCards(toolArgs.project_id, toolArgs.column_id);
           case 'basecamp_get_card':
@@ -98,15 +104,33 @@ export class BasecampMCPServer {
           case 'basecamp_trash_card':
             return await this.trashCard(toolArgs.project_id, toolArgs.card_id);
 
+          // Column Management
+          case 'basecamp_change_column_color':
+            return await this.changeColumnColor(toolArgs.project_id, toolArgs.column_id, toolArgs.color);
+          case 'basecamp_move_column':
+            return await this.moveColumn(toolArgs.project_id, toolArgs.card_table_id, toolArgs.source_id, toolArgs.target_id, toolArgs.position);
+          case 'basecamp_watch_column':
+            return await this.watchColumn(toolArgs.project_id, toolArgs.column_id);
+          case 'basecamp_unwatch_column':
+            return await this.unwatchColumn(toolArgs.project_id, toolArgs.column_id);
+          case 'basecamp_set_column_on_hold':
+            return await this.setColumnOnHold(toolArgs.project_id, toolArgs.column_id);
+          case 'basecamp_remove_column_on_hold':
+            return await this.removeColumnOnHold(toolArgs.project_id, toolArgs.column_id);
+
           // Card Steps
           case 'basecamp_list_steps':
             return await this.listSteps(toolArgs.project_id, toolArgs.card_id);
           case 'basecamp_add_step':
-            return await this.addStep(toolArgs.project_id, toolArgs.card_id, toolArgs.title);
+            return await this.addStep(toolArgs.project_id, toolArgs.card_id, toolArgs.title, toolArgs.due_on, toolArgs.assignees);
+          case 'basecamp_update_step':
+            return await this.updateStep(toolArgs.project_id, toolArgs.step_id, toolArgs.title, toolArgs.due_on, toolArgs.assignees);
           case 'basecamp_complete_step':
             return await this.completeStep(toolArgs.project_id, toolArgs.step_id);
           case 'basecamp_uncomplete_step':
             return await this.uncompleteStep(toolArgs.project_id, toolArgs.step_id);
+          case 'basecamp_reposition_step':
+            return await this.repositionStep(toolArgs.project_id, toolArgs.card_id, toolArgs.step_id, toolArgs.position);
 
           // People
           case 'basecamp_list_people':
@@ -155,8 +179,22 @@ export class BasecampMCPServer {
             return await this.createMessage(toolArgs.project_id, toolArgs.message_board_id, toolArgs.subject, toolArgs.content, toolArgs.attachment_sgids);
           case 'basecamp_update_message':
             return await this.updateMessage(toolArgs.project_id, toolArgs.message_id, toolArgs.subject, toolArgs.content);
+          case 'basecamp_pin_message':
+            return await this.pinMessage(toolArgs.project_id, toolArgs.message_id);
+          case 'basecamp_unpin_message':
+            return await this.unpinMessage(toolArgs.project_id, toolArgs.message_id);
 
-          // Documents & Vaults
+          // Vaults
+          case 'basecamp_list_vaults':
+            return await this.listVaults(toolArgs.project_id, toolArgs.vault_id);
+          case 'basecamp_get_vault':
+            return await this.getVault(toolArgs.project_id, toolArgs.vault_id);
+          case 'basecamp_create_vault':
+            return await this.createVault(toolArgs.project_id, toolArgs.parent_vault_id, toolArgs.title);
+          case 'basecamp_update_vault':
+            return await this.updateVault(toolArgs.project_id, toolArgs.vault_id, toolArgs.title);
+
+          // Documents
           case 'basecamp_list_documents':
             return await this.listDocuments(toolArgs.project_id, toolArgs.vault_id);
           case 'basecamp_get_document':
@@ -165,6 +203,16 @@ export class BasecampMCPServer {
             return await this.createDocument(toolArgs.project_id, toolArgs.vault_id, toolArgs.title, toolArgs.content);
           case 'basecamp_update_document':
             return await this.updateDocument(toolArgs.project_id, toolArgs.document_id, toolArgs.title, toolArgs.content);
+
+          // Uploads
+          case 'basecamp_list_uploads':
+            return await this.listUploads(toolArgs.project_id, toolArgs.vault_id);
+          case 'basecamp_get_upload':
+            return await this.getUpload(toolArgs.project_id, toolArgs.upload_id);
+          case 'basecamp_create_upload':
+            return await this.createUpload(toolArgs.project_id, toolArgs.vault_id, toolArgs.attachable_sgid, toolArgs.description, toolArgs.base_name);
+          case 'basecamp_update_upload':
+            return await this.updateUpload(toolArgs.project_id, toolArgs.upload_id, toolArgs.description, toolArgs.base_name);
 
           // Schedules & Events
           case 'basecamp_list_schedule_entries':
@@ -185,6 +233,22 @@ export class BasecampMCPServer {
             return await this.listCampfireLines(toolArgs.project_id, toolArgs.campfire_id);
           case 'basecamp_create_campfire_line':
             return await this.createCampfireLine(toolArgs.project_id, toolArgs.campfire_id, toolArgs.content, toolArgs.attachment_sgids);
+          case 'basecamp_delete_campfire_line':
+            return await this.deleteCampfireLine(toolArgs.project_id, toolArgs.campfire_id, toolArgs.line_id);
+
+          // People (Extended)
+          case 'basecamp_list_pingable_people':
+            return await this.listPingablePeople();
+          case 'basecamp_manage_project_people':
+            return await this.manageProjectPeople(toolArgs.project_id, toolArgs.grant, toolArgs.revoke);
+
+          // Recordings (Generic status)
+          case 'basecamp_trash_recording':
+            return await this.trashRecording(toolArgs.project_id, toolArgs.recording_id);
+          case 'basecamp_archive_recording':
+            return await this.archiveRecording(toolArgs.project_id, toolArgs.recording_id);
+          case 'basecamp_activate_recording':
+            return await this.activateRecording(toolArgs.project_id, toolArgs.recording_id);
 
           // Index Management
           case 'basecamp_index_build':
@@ -546,6 +610,30 @@ export class BasecampMCPServer {
     };
   }
 
+  private async getColumn(projectId: string, columnId: string): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    const response = await this.basecampApi.getColumn(projectId, columnId);
+    return {
+      content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }],
+    };
+  }
+
+  private async createColumn(projectId: string, cardTableId: string, title: string, description?: string): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    const response = await this.basecampApi.createColumn(projectId, cardTableId, title, description);
+    return {
+      content: [{ type: 'text', text: `Column created: ${response.data?.title} (ID: ${response.data?.id})` }],
+    };
+  }
+
+  private async updateColumn(projectId: string, columnId: string, title?: string, description?: string): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    await this.basecampApi.updateColumn(projectId, columnId, title, description);
+    return {
+      content: [{ type: 'text', text: `Column updated successfully` }],
+    };
+  }
+
   private async listCards(projectId: string, columnId: string): Promise<CallToolResult> {
     await this.basecampApi.getAccountId();
     const response = await this.basecampApi.getCards(projectId, columnId);
@@ -671,6 +759,54 @@ export class BasecampMCPServer {
     };
   }
 
+  private async changeColumnColor(projectId: string, columnId: string, color: string): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    await this.basecampApi.changeColumnColor(projectId, columnId, color);
+    return {
+      content: [{ type: 'text', text: `Column color changed to ${color}` }],
+    };
+  }
+
+  private async moveColumn(projectId: string, cardTableId: string, sourceId: string, targetId: string, position?: number): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    await this.basecampApi.moveColumn(projectId, cardTableId, sourceId, targetId, position);
+    return {
+      content: [{ type: 'text', text: `Column moved successfully` }],
+    };
+  }
+
+  private async watchColumn(projectId: string, columnId: string): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    await this.basecampApi.watchColumn(projectId, columnId);
+    return {
+      content: [{ type: 'text', text: `Now watching column` }],
+    };
+  }
+
+  private async unwatchColumn(projectId: string, columnId: string): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    await this.basecampApi.unwatchColumn(projectId, columnId);
+    return {
+      content: [{ type: 'text', text: `Stopped watching column` }],
+    };
+  }
+
+  private async setColumnOnHold(projectId: string, columnId: string): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    const response = await this.basecampApi.setColumnOnHold(projectId, columnId);
+    return {
+      content: [{ type: 'text', text: `On-hold section added to column` }],
+    };
+  }
+
+  private async removeColumnOnHold(projectId: string, columnId: string): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    const response = await this.basecampApi.removeColumnOnHold(projectId, columnId);
+    return {
+      content: [{ type: 'text', text: `On-hold section removed from column` }],
+    };
+  }
+
   private async listSteps(projectId: string, cardId: string): Promise<CallToolResult> {
     await this.basecampApi.getAccountId();
     const response = await this.basecampApi.getSteps(projectId, cardId);
@@ -685,9 +821,9 @@ export class BasecampMCPServer {
     };
   }
 
-  private async addStep(projectId: string, cardId: string, title: string): Promise<CallToolResult> {
+  private async addStep(projectId: string, cardId: string, title: string, dueOn?: string, assignees?: string): Promise<CallToolResult> {
     await this.basecampApi.getAccountId();
-    const response = await this.basecampApi.createStep(projectId, cardId, title);
+    const response = await this.basecampApi.createStep(projectId, cardId, title, dueOn, assignees);
 
     return {
       content: [
@@ -696,6 +832,22 @@ export class BasecampMCPServer {
           text: `Step added: ${title}`,
         },
       ],
+    };
+  }
+
+  private async updateStep(projectId: string, stepId: string, title?: string, dueOn?: string, assignees?: string): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    await this.basecampApi.updateStep(projectId, stepId, title, dueOn, assignees);
+    return {
+      content: [{ type: 'text', text: `Step updated successfully` }],
+    };
+  }
+
+  private async repositionStep(projectId: string, cardId: string, stepId: string, position: number): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    await this.basecampApi.repositionStep(projectId, cardId, stepId, position);
+    return {
+      content: [{ type: 'text', text: `Step repositioned to position ${position}` }],
     };
   }
 
@@ -890,7 +1042,15 @@ export class BasecampMCPServer {
    * =========================== */
 
   private async getTodoSet(projectId: string): Promise<CallToolResult> {
-    const response = await this.basecampApi.getTodoSet(projectId);
+    // Auto-discover todoset ID from project dock
+    await this.basecampApi.getAccountId();
+    const project = await this.basecampApi.getProject(projectId);
+    const dock = project.data?.dock || [];
+    const todoset = dock.find((tool: any) => tool.name === 'todoset');
+    if (!todoset) {
+      return { content: [{ type: 'text', text: 'No todoset found in this project' }] };
+    }
+    const response = await this.basecampApi.getTodoSet(projectId, String(todoset.id));
     return {
       content: [
         {
@@ -1043,8 +1203,48 @@ export class BasecampMCPServer {
     };
   }
 
+  private async pinMessage(projectId: string, messageId: string): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    await this.basecampApi.pinMessage(projectId, messageId);
+    return { content: [{ type: 'text', text: 'Message pinned' }] };
+  }
+
+  private async unpinMessage(projectId: string, messageId: string): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    await this.basecampApi.unpinMessage(projectId, messageId);
+    return { content: [{ type: 'text', text: 'Message unpinned' }] };
+  }
+
   /* ===========================
-   * DOCUMENTS & VAULTS HANDLERS
+   * VAULTS HANDLERS
+   * =========================== */
+
+  private async listVaults(projectId: string, vaultId: string): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    const response = await this.basecampApi.getVaults(projectId, vaultId);
+    return { content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }] };
+  }
+
+  private async getVault(projectId: string, vaultId: string): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    const response = await this.basecampApi.getVault(projectId, vaultId);
+    return { content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }] };
+  }
+
+  private async createVault(projectId: string, parentVaultId: string, title: string): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    const response = await this.basecampApi.createVault(projectId, parentVaultId, title);
+    return { content: [{ type: 'text', text: `Vault created: ${response.data?.title} (ID: ${response.data?.id})` }] };
+  }
+
+  private async updateVault(projectId: string, vaultId: string, title: string): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    await this.basecampApi.updateVault(projectId, vaultId, title);
+    return { content: [{ type: 'text', text: 'Vault updated' }] };
+  }
+
+  /* ===========================
+   * DOCUMENTS HANDLERS
    * =========================== */
 
   private async listDocuments(projectId: string, vaultId: string): Promise<CallToolResult> {
@@ -1093,6 +1293,34 @@ export class BasecampMCPServer {
         },
       ],
     };
+  }
+
+  /* ===========================
+   * UPLOADS HANDLERS
+   * =========================== */
+
+  private async listUploads(projectId: string, vaultId: string): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    const response = await this.basecampApi.getUploads(projectId, vaultId);
+    return { content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }] };
+  }
+
+  private async getUpload(projectId: string, uploadId: string): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    const response = await this.basecampApi.getUpload(projectId, uploadId);
+    return { content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }] };
+  }
+
+  private async createUpload(projectId: string, vaultId: string, attachableSgid: string, description?: string, baseName?: string): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    const response = await this.basecampApi.createUpload(projectId, vaultId, attachableSgid, description, baseName);
+    return { content: [{ type: 'text', text: `Upload created (ID: ${response.data?.id})` }] };
+  }
+
+  private async updateUpload(projectId: string, uploadId: string, description?: string, baseName?: string): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    await this.basecampApi.updateUpload(projectId, uploadId, description, baseName);
+    return { content: [{ type: 'text', text: 'Upload updated' }] };
   }
 
   /* ===========================
@@ -1219,6 +1447,52 @@ export class BasecampMCPServer {
         },
       ],
     };
+  }
+
+  private async deleteCampfireLine(projectId: string, campfireId: string, lineId: string): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    await this.basecampApi.deleteCampfireLine(projectId, campfireId, lineId);
+    return { content: [{ type: 'text', text: 'Chat line deleted' }] };
+  }
+
+  /* ===========================
+   * PEOPLE (Extended) HANDLERS
+   * =========================== */
+
+  private async listPingablePeople(): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    const response = await this.basecampApi.getPingablePeople();
+    return { content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }] };
+  }
+
+  private async manageProjectPeople(projectId: string, grant?: number[], revoke?: number[]): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    await this.basecampApi.manageProjectPeople(projectId, grant || [], revoke || []);
+    const grantCount = grant?.length || 0;
+    const revokeCount = revoke?.length || 0;
+    return { content: [{ type: 'text', text: `Project people updated: ${grantCount} granted, ${revokeCount} revoked` }] };
+  }
+
+  /* ===========================
+   * RECORDINGS HANDLERS
+   * =========================== */
+
+  private async trashRecording(projectId: string, recordingId: string): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    await this.basecampApi.trashRecording(projectId, recordingId);
+    return { content: [{ type: 'text', text: 'Recording trashed' }] };
+  }
+
+  private async archiveRecording(projectId: string, recordingId: string): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    await this.basecampApi.archiveRecording(projectId, recordingId);
+    return { content: [{ type: 'text', text: 'Recording archived' }] };
+  }
+
+  private async activateRecording(projectId: string, recordingId: string): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    await this.basecampApi.activateRecording(projectId, recordingId);
+    return { content: [{ type: 'text', text: 'Recording activated' }] };
   }
 
   /* ===========================

@@ -217,7 +217,17 @@ export class BasecampAPI {
    * =========================== */
 
   async getCardTables(projectId: string) {
-    return this.get(`/${this.accountId}/buckets/${projectId}/card_tables.json`);
+    // No dedicated "list card tables" endpoint exists in the Basecamp API.
+    // The card table ID comes from the project's dock (kanban_board tool).
+    // Get the project and extract the card table from its dock.
+    const project = await this.get(`/${this.accountId}/projects/${projectId}.json`);
+    const dock = project.data?.dock || [];
+    const kanban = dock.find((tool: any) => tool.name === 'kanban_board');
+    if (kanban) {
+      const cardTable = await this.get(`/${this.accountId}/buckets/${projectId}/card_tables/${kanban.id}.json`);
+      return { ...project, data: [cardTable.data] };
+    }
+    return { ...project, data: [] };
   }
 
   async getCardTable(projectId: string, cardTableId: string) {
@@ -228,28 +238,63 @@ export class BasecampAPI {
    * CARD TABLE COLUMNS
    * =========================== */
 
-  async getColumns(projectId: string, cardTableId: string, page = 1) {
-    return this.get(
-      `/${this.accountId}/buckets/${projectId}/card_tables/${cardTableId}/columns.json`,
-      { page: page.toString() }
+  async getColumns(projectId: string, cardTableId: string) {
+    // Basecamp API has no dedicated "list columns" endpoint.
+    // Columns are returned as the `lists` array inside the card table response.
+    const response = await this.get(
+      `/${this.accountId}/buckets/${projectId}/card_tables/${cardTableId}.json`
     );
+    return { ...response, data: response.data?.lists || [] };
   }
 
   async getColumn(projectId: string, columnId: string) {
     return this.get(`/${this.accountId}/buckets/${projectId}/card_tables/columns/${columnId}.json`);
   }
 
-  async createColumn(projectId: string, cardTableId: string, title: string, color?: string) {
+  async createColumn(projectId: string, cardTableId: string, title: string, description?: string) {
     const data: any = { title };
-    if (color) data.color = color;
+    if (description) data.description = description;
     return this.post(`/${this.accountId}/buckets/${projectId}/card_tables/${cardTableId}/columns.json`, data);
   }
 
-  async updateColumn(projectId: string, columnId: string, title?: string, color?: string) {
+  async updateColumn(projectId: string, columnId: string, title?: string, description?: string) {
     const data: any = {};
     if (title) data.title = title;
-    if (color) data.color = color;
+    if (description) data.description = description;
     return this.put(`/${this.accountId}/buckets/${projectId}/card_tables/columns/${columnId}.json`, data);
+  }
+
+  async changeColumnColor(projectId: string, columnId: string, color: string) {
+    // Official API: PUT /buckets/{projectId}/card_tables/columns/{columnId}/color.json
+    // Available colors: white, red, orange, yellow, green, blue, aqua, purple, gray, pink, brown
+    return this.put(`/${this.accountId}/buckets/${projectId}/card_tables/columns/${columnId}/color.json`, { color });
+  }
+
+  async moveColumn(projectId: string, cardTableId: string, sourceId: string, targetId: string, position?: number) {
+    // Official API: POST /buckets/{projectId}/card_tables/{cardTableId}/moves.json
+    const data: any = { source_id: sourceId, target_id: targetId };
+    if (position !== undefined) data.position = position;
+    return this.post(`/${this.accountId}/buckets/${projectId}/card_tables/${cardTableId}/moves.json`, data);
+  }
+
+  async watchColumn(projectId: string, columnId: string) {
+    // Official API: POST /buckets/{projectId}/card_tables/lists/{columnId}/subscription.json
+    return this.post(`/${this.accountId}/buckets/${projectId}/card_tables/lists/${columnId}/subscription.json`);
+  }
+
+  async unwatchColumn(projectId: string, columnId: string) {
+    // Official API: DELETE /buckets/{projectId}/card_tables/lists/{columnId}/subscription.json
+    return this.delete(`/${this.accountId}/buckets/${projectId}/card_tables/lists/${columnId}/subscription.json`);
+  }
+
+  async setColumnOnHold(projectId: string, columnId: string) {
+    // Official API: POST /buckets/{projectId}/card_tables/columns/{columnId}/on_hold.json
+    return this.post(`/${this.accountId}/buckets/${projectId}/card_tables/columns/${columnId}/on_hold.json`);
+  }
+
+  async removeColumnOnHold(projectId: string, columnId: string) {
+    // Official API: DELETE /buckets/{projectId}/card_tables/columns/{columnId}/on_hold.json
+    return this.delete(`/${this.accountId}/buckets/${projectId}/card_tables/columns/${columnId}/on_hold.json`);
   }
 
   /* ===========================
@@ -310,33 +355,66 @@ export class BasecampAPI {
    * =========================== */
 
   async getSteps(projectId: string, cardId: string) {
-    return this.get(`/${this.accountId}/buckets/${projectId}/card_tables/cards/${cardId}/steps.json`);
+    // No dedicated "list steps" endpoint exists in the Basecamp API.
+    // Steps are returned as part of the Get a card response.
+    const response = await this.get(
+      `/${this.accountId}/buckets/${projectId}/card_tables/cards/${cardId}.json`
+    );
+    return { ...response, data: response.data?.steps || [] };
   }
 
-  async getStep(projectId: string, stepId: string) {
-    return this.get(`/${this.accountId}/buckets/${projectId}/card_tables/steps/${stepId}.json`);
+  async getStep(projectId: string, cardId: string, stepId: string) {
+    // No dedicated "get step" endpoint exists in the Basecamp API.
+    // Extract from the card's steps array.
+    const response = await this.getSteps(projectId, cardId);
+    const step = (response.data || []).find((s: any) => String(s.id) === String(stepId));
+    return { ...response, data: step || null };
   }
 
-  async createStep(projectId: string, cardId: string, title: string) {
+  async createStep(projectId: string, cardId: string, title: string, dueOn?: string, assignees?: string) {
+    // Official API: POST /buckets/{projectId}/card_tables/cards/{cardId}/steps.json
+    // assignees is a comma-separated list of people IDs
+    const data: any = { title };
+    if (dueOn) data.due_on = dueOn;
+    if (assignees) data.assignees = assignees;
     return this.post(
       `/${this.accountId}/buckets/${projectId}/card_tables/cards/${cardId}/steps.json`,
-      { title }
+      data
     );
   }
 
-  async updateStep(projectId: string, stepId: string, title?: string, completed?: boolean) {
+  async updateStep(projectId: string, stepId: string, title?: string, dueOn?: string, assignees?: string) {
+    // Official API: PUT /buckets/{projectId}/card_tables/steps/{stepId}.json
+    // Only title, due_on, assignees are valid params. Completion uses a separate endpoint.
     const data: any = {};
     if (title) data.title = title;
-    if (completed !== undefined) data.completed = completed;
+    if (dueOn) data.due_on = dueOn;
+    if (assignees) data.assignees = assignees;
     return this.put(`/${this.accountId}/buckets/${projectId}/card_tables/steps/${stepId}.json`, data);
   }
 
+  async repositionStep(projectId: string, cardId: string, stepId: string, position: number) {
+    // Official API: POST /buckets/{projectId}/card_tables/cards/{cardId}/positions.json
+    return this.post(
+      `/${this.accountId}/buckets/${projectId}/card_tables/cards/${cardId}/positions.json`,
+      { source_id: stepId, position }
+    );
+  }
+
   async completeStep(projectId: string, stepId: string) {
-    return this.updateStep(projectId, stepId, undefined, true);
+    // Official API: PUT /buckets/{projectId}/card_tables/steps/{stepId}/completions.json
+    return this.put(
+      `/${this.accountId}/buckets/${projectId}/card_tables/steps/${stepId}/completions.json`,
+      { completion: 'on' }
+    );
   }
 
   async uncompleteStep(projectId: string, stepId: string) {
-    return this.updateStep(projectId, stepId, undefined, false);
+    // Official API: PUT /buckets/{projectId}/card_tables/steps/{stepId}/completions.json
+    return this.put(
+      `/${this.accountId}/buckets/${projectId}/card_tables/steps/${stepId}/completions.json`,
+      { completion: 'off' }
+    );
   }
 
   /* ===========================
@@ -373,8 +451,10 @@ export class BasecampAPI {
    * TODOSETS
    * =========================== */
 
-  async getTodoSet(projectId: string) {
-    return this.get(`/${this.accountId}/buckets/${projectId}/todosets.json`);
+  async getTodoSet(projectId: string, todosetId: string) {
+    // Official API: GET /buckets/{projectId}/todosets/{todosetId}.json
+    // The todoset ID comes from the project's dock (todoset tool).
+    return this.get(`/${this.accountId}/buckets/${projectId}/todosets/${todosetId}.json`);
   }
 
   /* ===========================
@@ -492,12 +572,34 @@ export class BasecampAPI {
     return this.put(`/${this.accountId}/buckets/${projectId}/messages/${messageId}.json`, data);
   }
 
+  async pinMessage(projectId: string, recordingId: string) {
+    return this.post(`/${this.accountId}/buckets/${projectId}/recordings/${recordingId}/pin.json`);
+  }
+
+  async unpinMessage(projectId: string, recordingId: string) {
+    return this.delete(`/${this.accountId}/buckets/${projectId}/recordings/${recordingId}/pin.json`);
+  }
+
   /* ===========================
    * VAULTS & DOCUMENTS
    * =========================== */
 
+  async getVaults(projectId: string, vaultId: string, page = 1) {
+    return this.get(`/${this.accountId}/buckets/${projectId}/vaults/${vaultId}/vaults.json`, {
+      page: page.toString()
+    });
+  }
+
   async getVault(projectId: string, vaultId: string) {
     return this.get(`/${this.accountId}/buckets/${projectId}/vaults/${vaultId}.json`);
+  }
+
+  async createVault(projectId: string, parentVaultId: string, title: string) {
+    return this.post(`/${this.accountId}/buckets/${projectId}/vaults/${parentVaultId}/vaults.json`, { title });
+  }
+
+  async updateVault(projectId: string, vaultId: string, title: string) {
+    return this.put(`/${this.accountId}/buckets/${projectId}/vaults/${vaultId}.json`, { title });
   }
 
   async getDocuments(projectId: string, vaultId: string, page = 1) {
@@ -526,11 +628,45 @@ export class BasecampAPI {
   }
 
   /* ===========================
+   * UPLOADS (Files in Vaults)
+   * =========================== */
+
+  async getUploads(projectId: string, vaultId: string, page = 1) {
+    return this.get(`/${this.accountId}/buckets/${projectId}/vaults/${vaultId}/uploads.json`, {
+      page: page.toString()
+    });
+  }
+
+  async getUpload(projectId: string, uploadId: string) {
+    return this.get(`/${this.accountId}/buckets/${projectId}/uploads/${uploadId}.json`);
+  }
+
+  async createUpload(projectId: string, vaultId: string, attachableSgid: string, description?: string, baseName?: string) {
+    const data: any = { attachable_sgid: attachableSgid };
+    if (description) data.description = description;
+    if (baseName) data.base_name = baseName;
+    return this.post(`/${this.accountId}/buckets/${projectId}/vaults/${vaultId}/uploads.json`, data);
+  }
+
+  async updateUpload(projectId: string, uploadId: string, description?: string, baseName?: string) {
+    const data: any = {};
+    if (description) data.description = description;
+    if (baseName) data.base_name = baseName;
+    return this.put(`/${this.accountId}/buckets/${projectId}/uploads/${uploadId}.json`, data);
+  }
+
+  /* ===========================
    * SCHEDULES & SCHEDULE ENTRIES
    * =========================== */
 
   async getSchedule(projectId: string, scheduleId: string) {
     return this.get(`/${this.accountId}/buckets/${projectId}/schedules/${scheduleId}.json`);
+  }
+
+  async updateSchedule(projectId: string, scheduleId: string, include_due_dates?: boolean) {
+    const data: any = {};
+    if (include_due_dates !== undefined) data.include_due_dates = include_due_dates;
+    return this.put(`/${this.accountId}/buckets/${projectId}/schedules/${scheduleId}.json`, data);
   }
 
   async getScheduleEntries(projectId: string, scheduleId: string, status?: string, startDate?: string, endDate?: string, page = 1) {
@@ -607,6 +743,10 @@ export class BasecampAPI {
     return this.post(`/${this.accountId}/buckets/${projectId}/chats/${campfireId}/lines.json`, { content });
   }
 
+  async deleteCampfireLine(projectId: string, campfireId: string, lineId: string) {
+    return this.delete(`/${this.accountId}/buckets/${projectId}/chats/${campfireId}/lines/${lineId}.json`);
+  }
+
   /* ===========================
    * PEOPLE
    * =========================== */
@@ -625,6 +765,33 @@ export class BasecampAPI {
 
   async getMyInfo() {
     return this.get(`/${this.accountId}/my/profile.json`);
+  }
+
+  async getPingablePeople() {
+    return this.get(`/${this.accountId}/circles/people.json`);
+  }
+
+  async manageProjectPeople(projectId: string, grant: number[] = [], revoke: number[] = []) {
+    const data: any = {};
+    if (grant.length > 0) data.grant = grant;
+    if (revoke.length > 0) data.revoke = revoke;
+    return this.put(`/${this.accountId}/projects/${projectId}/people/users.json`, data);
+  }
+
+  /* ===========================
+   * RECORDINGS (Generic trash/archive/activate)
+   * =========================== */
+
+  async trashRecording(projectId: string, recordingId: string) {
+    return this.put(`/${this.accountId}/buckets/${projectId}/recordings/${recordingId}/status/trashed.json`);
+  }
+
+  async archiveRecording(projectId: string, recordingId: string) {
+    return this.put(`/${this.accountId}/buckets/${projectId}/recordings/${recordingId}/status/archived.json`);
+  }
+
+  async activateRecording(projectId: string, recordingId: string) {
+    return this.put(`/${this.accountId}/buckets/${projectId}/recordings/${recordingId}/status/active.json`);
   }
 
   /* ===========================

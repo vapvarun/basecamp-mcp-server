@@ -200,6 +200,46 @@ export const tools: Tool[] = [
     }
   },
   {
+    name: 'basecamp_get_column',
+    description: 'Get detailed information about a specific column (including subscribers, color, cards count)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        column_id: { type: 'string' }
+      },
+      required: ['project_id', 'column_id']
+    }
+  },
+  {
+    name: 'basecamp_create_column',
+    description: 'Create a new column in a card table',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        card_table_id: { type: 'string', description: 'Card table ID' },
+        title: { type: 'string', description: 'Column title' },
+        description: { type: 'string', description: 'Column description' }
+      },
+      required: ['project_id', 'card_table_id', 'title']
+    }
+  },
+  {
+    name: 'basecamp_update_column',
+    description: 'Update a column title or description',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        column_id: { type: 'string' },
+        title: { type: 'string', description: 'New column title' },
+        description: { type: 'string', description: 'New column description' }
+      },
+      required: ['project_id', 'column_id']
+    }
+  },
+  {
     name: 'basecamp_list_cards',
     description: 'List all cards in a specific column',
     inputSchema: {
@@ -319,6 +359,90 @@ export const tools: Tool[] = [
   },
 
   /* ===========================
+   * COLUMN MANAGEMENT
+   * =========================== */
+  {
+    name: 'basecamp_change_column_color',
+    description: 'Change the color of a card table column. Available colors: white, red, orange, yellow, green, blue, aqua, purple, gray, pink, brown',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        column_id: { type: 'string' },
+        color: {
+          type: 'string',
+          enum: ['white', 'red', 'orange', 'yellow', 'green', 'blue', 'aqua', 'purple', 'gray', 'pink', 'brown'],
+          description: 'Column color'
+        }
+      },
+      required: ['project_id', 'column_id', 'color']
+    }
+  },
+  {
+    name: 'basecamp_move_column',
+    description: 'Move/reorder a column within a card table',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        card_table_id: { type: 'string', description: 'Card table ID' },
+        source_id: { type: 'string', description: 'Column ID to move' },
+        target_id: { type: 'string', description: 'Card table ID (target)' },
+        position: { type: 'number', description: 'Position index (ignoring Triage, Not Now, Done). Default: 1' }
+      },
+      required: ['project_id', 'card_table_id', 'source_id', 'target_id']
+    }
+  },
+  {
+    name: 'basecamp_watch_column',
+    description: 'Start watching/subscribing to a column for notifications',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        column_id: { type: 'string' }
+      },
+      required: ['project_id', 'column_id']
+    }
+  },
+  {
+    name: 'basecamp_unwatch_column',
+    description: 'Stop watching/subscribing to a column',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        column_id: { type: 'string' }
+      },
+      required: ['project_id', 'column_id']
+    }
+  },
+  {
+    name: 'basecamp_set_column_on_hold',
+    description: 'Add an on-hold section to a column',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        column_id: { type: 'string' }
+      },
+      required: ['project_id', 'column_id']
+    }
+  },
+  {
+    name: 'basecamp_remove_column_on_hold',
+    description: 'Remove the on-hold section from a column',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        column_id: { type: 'string' }
+      },
+      required: ['project_id', 'column_id']
+    }
+  },
+
+  /* ===========================
    * CARD STEPS
    * =========================== */
   {
@@ -341,9 +465,26 @@ export const tools: Tool[] = [
       properties: {
         project_id: { type: 'string' },
         card_id: { type: 'string' },
-        title: { type: 'string', description: 'Step description' }
+        title: { type: 'string', description: 'Step title' },
+        due_on: { type: 'string', description: 'Due date (ISO 8601, e.g. 2026-03-01)' },
+        assignees: { type: 'string', description: 'Comma-separated list of person IDs to assign' }
       },
       required: ['project_id', 'card_id', 'title']
+    }
+  },
+  {
+    name: 'basecamp_update_step',
+    description: 'Update a step title, due date, or assignees',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        step_id: { type: 'string' },
+        title: { type: 'string', description: 'New step title' },
+        due_on: { type: 'string', description: 'Due date (ISO 8601)' },
+        assignees: { type: 'string', description: 'Comma-separated list of person IDs' }
+      },
+      required: ['project_id', 'step_id']
     }
   },
   {
@@ -368,6 +509,20 @@ export const tools: Tool[] = [
         step_id: { type: 'string' }
       },
       required: ['project_id', 'step_id']
+    }
+  },
+  {
+    name: 'basecamp_reposition_step',
+    description: 'Change the position of a step within a card',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        card_id: { type: 'string', description: 'Card ID containing the step' },
+        step_id: { type: 'string', description: 'Step ID to move' },
+        position: { type: 'number', description: 'New position (zero-indexed)' }
+      },
+      required: ['project_id', 'card_id', 'step_id', 'position']
     }
   },
 
@@ -711,9 +866,84 @@ export const tools: Tool[] = [
     }
   },
 
+  {
+    name: 'basecamp_pin_message',
+    description: 'Pin a message to the top of the message board',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        message_id: { type: 'string', description: 'Message/recording ID to pin' }
+      },
+      required: ['project_id', 'message_id']
+    }
+  },
+  {
+    name: 'basecamp_unpin_message',
+    description: 'Unpin a message from the message board',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        message_id: { type: 'string', description: 'Message/recording ID to unpin' }
+      },
+      required: ['project_id', 'message_id']
+    }
+  },
+
   /* ===========================
    * DOCUMENTS & VAULTS
    * =========================== */
+  {
+    name: 'basecamp_list_vaults',
+    description: 'List all sub-vaults (folders) within a vault',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        vault_id: { type: 'string', description: 'Parent vault ID' }
+      },
+      required: ['project_id', 'vault_id']
+    }
+  },
+  {
+    name: 'basecamp_get_vault',
+    description: 'Get details of a specific vault (folder)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        vault_id: { type: 'string' }
+      },
+      required: ['project_id', 'vault_id']
+    }
+  },
+  {
+    name: 'basecamp_create_vault',
+    description: 'Create a new sub-vault (folder) within a vault',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        parent_vault_id: { type: 'string', description: 'Parent vault ID to create under' },
+        title: { type: 'string', description: 'Vault/folder name' }
+      },
+      required: ['project_id', 'parent_vault_id', 'title']
+    }
+  },
+  {
+    name: 'basecamp_update_vault',
+    description: 'Rename a vault (folder)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        vault_id: { type: 'string' },
+        title: { type: 'string', description: 'New vault name' }
+      },
+      required: ['project_id', 'vault_id', 'title']
+    }
+  },
   {
     name: 'basecamp_list_documents',
     description: 'List all documents in a vault (Docs & Files)',
@@ -764,6 +994,63 @@ export const tools: Tool[] = [
         content: { type: 'string' }
       },
       required: ['project_id', 'document_id']
+    }
+  },
+
+  /* ===========================
+   * UPLOADS (Files in Vaults)
+   * =========================== */
+  {
+    name: 'basecamp_list_uploads',
+    description: 'List all file uploads in a vault',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        vault_id: { type: 'string', description: 'Vault ID' }
+      },
+      required: ['project_id', 'vault_id']
+    }
+  },
+  {
+    name: 'basecamp_get_upload',
+    description: 'Get details of a specific file upload',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        upload_id: { type: 'string' }
+      },
+      required: ['project_id', 'upload_id']
+    }
+  },
+  {
+    name: 'basecamp_create_upload',
+    description: 'Create a file upload in a vault. First use basecamp_upload_attachment to get an attachable_sgid, then use this to place it in a vault.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        vault_id: { type: 'string', description: 'Vault ID to upload into' },
+        attachable_sgid: { type: 'string', description: 'SGID from basecamp_upload_attachment' },
+        description: { type: 'string', description: 'File description' },
+        base_name: { type: 'string', description: 'Rename the file (without extension)' }
+      },
+      required: ['project_id', 'vault_id', 'attachable_sgid']
+    }
+  },
+  {
+    name: 'basecamp_update_upload',
+    description: 'Update a file upload description or name',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        upload_id: { type: 'string' },
+        description: { type: 'string', description: 'New description' },
+        base_name: { type: 'string', description: 'Rename the file (without extension)' }
+      },
+      required: ['project_id', 'upload_id']
     }
   },
 
@@ -886,6 +1173,93 @@ export const tools: Tool[] = [
         }
       },
       required: ['project_id', 'campfire_id', 'content']
+    }
+  },
+
+  {
+    name: 'basecamp_delete_campfire_line',
+    description: 'Delete a chat message/line from a Campfire',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        campfire_id: { type: 'string' },
+        line_id: { type: 'string', description: 'Chat line ID to delete' }
+      },
+      required: ['project_id', 'campfire_id', 'line_id']
+    }
+  },
+
+  /* ===========================
+   * PEOPLE (Extended)
+   * =========================== */
+  {
+    name: 'basecamp_list_pingable_people',
+    description: 'List all people who can be pinged (mentioned) on this Basecamp account',
+    inputSchema: {
+      type: 'object',
+      properties: {}
+    }
+  },
+  {
+    name: 'basecamp_manage_project_people',
+    description: 'Grant or revoke project access for people',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        grant: {
+          type: 'array',
+          items: { type: 'number' },
+          description: 'Array of person IDs to grant access'
+        },
+        revoke: {
+          type: 'array',
+          items: { type: 'number' },
+          description: 'Array of person IDs to revoke access'
+        }
+      },
+      required: ['project_id']
+    }
+  },
+
+  /* ===========================
+   * RECORDINGS (Generic status changes)
+   * =========================== */
+  {
+    name: 'basecamp_trash_recording',
+    description: 'Trash any Basecamp recording (card, todo, message, document, etc.)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        recording_id: { type: 'string', description: 'Recording ID to trash' }
+      },
+      required: ['project_id', 'recording_id']
+    }
+  },
+  {
+    name: 'basecamp_archive_recording',
+    description: 'Archive any Basecamp recording',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        recording_id: { type: 'string', description: 'Recording ID to archive' }
+      },
+      required: ['project_id', 'recording_id']
+    }
+  },
+  {
+    name: 'basecamp_activate_recording',
+    description: 'Reactivate a trashed or archived Basecamp recording',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        recording_id: { type: 'string', description: 'Recording ID to activate' }
+      },
+      required: ['project_id', 'recording_id']
     }
   },
 
