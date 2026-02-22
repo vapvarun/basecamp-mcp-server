@@ -161,13 +161,31 @@ export const tools: Tool[] = [
   },
   {
     name: 'basecamp_update_project',
-    description: 'Update a project name or description',
+    description: 'Update a project name, description, access policy, or schedule dates',
     inputSchema: {
       type: 'object',
       properties: {
         project_id: { type: 'string' },
-        name: { type: 'string' },
-        description: { type: 'string' }
+        name: { type: 'string', description: 'Project name (required by API)' },
+        description: { type: 'string', description: 'Project description' },
+        admissions: {
+          type: 'string',
+          enum: ['invite', 'employee', 'team'],
+          description: 'Access policy: invite (only invited), employee (anyone in account), team (anyone except clients)'
+        },
+        start_date: { type: 'string', description: 'Project start date (YYYY-MM-DD). Must be paired with end_date.' },
+        end_date: { type: 'string', description: 'Project end date (YYYY-MM-DD). Must be paired with start_date.' }
+      },
+      required: ['project_id']
+    }
+  },
+  {
+    name: 'basecamp_get_project_dock',
+    description: 'Get a clean map of all dock tool IDs for a project (message_board, todoset, vault, chat, schedule, questionnaire, inbox, kanban_board). Use this to quickly find tool IDs needed by other endpoints.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string', description: 'Project ID' }
       },
       required: ['project_id']
     }

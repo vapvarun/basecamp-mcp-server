@@ -78,7 +78,9 @@ export class BasecampMCPServer {
           case 'basecamp_create_project':
             return await this.createProject(toolArgs.name, toolArgs.description);
           case 'basecamp_update_project':
-            return await this.updateProject(toolArgs.project_id, toolArgs.name, toolArgs.description);
+            return await this.updateProject(toolArgs);
+          case 'basecamp_get_project_dock':
+            return await this.getProjectDock(toolArgs.project_id);
           case 'basecamp_trash_project':
             return await this.trashProject(toolArgs.project_id);
 
@@ -568,15 +570,42 @@ export class BasecampMCPServer {
     };
   }
 
-  private async updateProject(projectId: string, name?: string, description?: string): Promise<CallToolResult> {
+  private async updateProject(args: any): Promise<CallToolResult> {
     await this.basecampApi.getAccountId();
-    const response = await this.basecampApi.updateProject(projectId, name, description);
+
+    // Build schedule_attributes if start_date and end_date provided
+    let scheduleAttributes: { start_date: string; end_date: string } | undefined;
+    if (args.start_date && args.end_date) {
+      scheduleAttributes = { start_date: args.start_date, end_date: args.end_date };
+    }
+
+    const response = await this.basecampApi.updateProject(
+      args.project_id,
+      args.name,
+      args.description,
+      args.admissions,
+      scheduleAttributes
+    );
 
     return {
       content: [
         {
           type: 'text',
           text: `Project updated successfully`,
+        },
+      ],
+    };
+  }
+
+  private async getProjectDock(projectId: string): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    const response = await this.basecampApi.getProjectDock(projectId);
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2),
         },
       ],
     };

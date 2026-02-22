@@ -201,11 +201,35 @@ export class BasecampAPI {
     return this.post(`/${this.accountId}/projects.json`, { name, description });
   }
 
-  async updateProject(projectId: string, name?: string, description?: string) {
+  async updateProject(
+    projectId: string,
+    name?: string,
+    description?: string,
+    admissions?: 'invite' | 'employee' | 'team',
+    scheduleAttributes?: { start_date: string; end_date: string }
+  ) {
     const data: any = {};
     if (name) data.name = name;
     if (description) data.description = description;
+    if (admissions) data.admissions = admissions;
+    if (scheduleAttributes) data.schedule_attributes = scheduleAttributes;
     return this.put(`/${this.accountId}/projects/${projectId}.json`, data);
+  }
+
+  async getProjectDock(projectId: string) {
+    // Convenience method: fetches a project and returns a clean map of dock tool names → IDs
+    const response = await this.get(`/${this.accountId}/projects/${projectId}.json`);
+    const dock = response.data?.dock || [];
+    const dockMap: Record<string, { id: number; title: string; enabled: boolean; url: string }> = {};
+    for (const tool of dock) {
+      dockMap[tool.name] = {
+        id: tool.id,
+        title: tool.title,
+        enabled: tool.enabled,
+        url: tool.url
+      };
+    }
+    return { ...response, data: dockMap };
   }
 
   async trashProject(projectId: string) {
