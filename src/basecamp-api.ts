@@ -149,6 +149,60 @@ export class BasecampAPI {
     return this.request<T>('GET', endpoint, null, query);
   }
 
+  /**
+   * Walk every page of a paginated GET endpoint by following the Link
+   * header's rel="next" URL until none is returned. Returns the aggregated
+   * array across all pages. The Basecamp API caps each page at 15 rows,
+   * so a column with 224 cards needs 15 pages — this helper handles it.
+   *
+   * @param endpoint  Initial endpoint path (no scheme/host).
+   * @param query     Initial query params.
+   * @param maxPages  Safety cap (default 200 pages = 3000 rows).
+   */
+  private async getAll<T = any>(
+    endpoint: string,
+    query?: Record<string, string>,
+    maxPages = 200
+  ): Promise<BasecampResponse<T[]>> {
+    const first = await this.request<T[]>('GET', endpoint, null, query);
+    if (first.error || first.code >= 400) {
+      return first as BasecampResponse<T[]>;
+    }
+    const all: T[] = Array.isArray(first.data) ? [...first.data] : [];
+    let nextUrl = this.parseNextLink(first.headers?.link);
+    let pagesWalked = 1;
+
+    while (nextUrl && pagesWalked < maxPages) {
+      // Basecamp next URLs are absolute — strip the API_BASE prefix so we
+      // reuse the request() method's auth + user-agent + error handling.
+      const relative = nextUrl.replace(BasecampAPI.API_BASE, '');
+      const page = await this.request<T[]>('GET', relative);
+      if (page.error || page.code >= 400) break;
+      if (Array.isArray(page.data)) all.push(...page.data);
+      nextUrl = this.parseNextLink(page.headers?.link);
+      pagesWalked += 1;
+    }
+
+    return {
+      code: first.code,
+      data: all,
+      headers: first.headers,
+    };
+  }
+
+  /**
+   * Extract the `next` URL from a Link header: `<url>; rel="next", <url>; rel="prev"`.
+   */
+  private parseNextLink(linkHeader?: string): string | null {
+    if (!linkHeader) return null;
+    const parts = linkHeader.split(',');
+    for (const p of parts) {
+      const m = p.match(/<([^>]+)>\s*;\s*rel="next"/);
+      if (m) return m[1];
+    }
+    return null;
+  }
+
   private async post<T = any>(endpoint: string, data?: any): Promise<BasecampResponse<T>> {
     return this.request<T>('POST', endpoint, data);
   }
@@ -330,6 +384,48 @@ export class BasecampAPI {
       `/${this.accountId}/buckets/${projectId}/card_tables/lists/${columnId}/cards.json`,
       { page: page.toString() }
     );
+  }
+
+  /**
+   * Fetch every card in a column across all pages. Basecamp caps pages at
+   * 15 rows; this walks Link headers until exhausted so a 224-card Done
+   * column arrives as one array.
+   */
+  async getAllCards(projectId: string, columnId: string) {
+    return this.getAll(
+      `/${this.accountId}/buckets/${projectId}/card_tables/lists/${columnId}/cards.json`
+    );
+  }
+
+  /**
+   * Compact card listing — id + title + url + timestamps + comment count
+   * only. Strips description HTML, subscribers, creator metadata and
+   * anything else unneeded for iteration. Payload is ~5% of getAllCards
+   * which matters when a column has 200+ rows.
+   */
+  async getCardIds(projectId: string, columnId: string) {
+    const response = await this.getAllCards(projectId, columnId);
+    if (response.error || !Array.isArray(response.data)) {
+      return response;
+    }
+    const compact = response.data.map((card: any) => ({
+      id: card.id,
+      title: card.title,
+      status: card.status,
+      app_url: card.app_url,
+      created_at: card.created_at,
+      updated_at: card.updated_at,
+      comments_count: card.comments_count,
+      assignees: Array.isArray(card.assignees)
+        ? card.assignees.map((a: any) => a.name).filter(Boolean)
+        : [],
+      completed: card.completed,
+    }));
+    return {
+      code: response.code,
+      data: compact,
+      headers: response.headers,
+    };
   }
 
   async getCard(projectId: string, cardId: string) {

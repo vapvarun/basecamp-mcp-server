@@ -94,7 +94,14 @@ export class BasecampMCPServer {
           case 'basecamp_update_column':
             return await this.updateColumn(toolArgs.project_id, toolArgs.column_id, toolArgs.title, toolArgs.description);
           case 'basecamp_list_cards':
-            return await this.listCards(toolArgs.project_id, toolArgs.column_id);
+            return await this.listCards(
+              toolArgs.project_id,
+              toolArgs.column_id,
+              toolArgs.single_page === true,
+              typeof toolArgs.page === 'number' ? toolArgs.page : 1,
+            );
+          case 'basecamp_list_card_ids':
+            return await this.listCardIds(toolArgs.project_id, toolArgs.column_id);
           case 'basecamp_get_card':
             return await this.getCard(toolArgs.project_id, toolArgs.card_id);
           case 'basecamp_create_card':
@@ -663,9 +670,30 @@ export class BasecampMCPServer {
     };
   }
 
-  private async listCards(projectId: string, columnId: string): Promise<CallToolResult> {
+  private async listCards(
+    projectId: string,
+    columnId: string,
+    singlePage = false,
+    page = 1,
+  ): Promise<CallToolResult> {
     await this.basecampApi.getAccountId();
-    const response = await this.basecampApi.getCards(projectId, columnId);
+    const response = singlePage
+      ? await this.basecampApi.getCards(projectId, columnId, page)
+      : await this.basecampApi.getAllCards(projectId, columnId);
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async listCardIds(projectId: string, columnId: string): Promise<CallToolResult> {
+    await this.basecampApi.getAccountId();
+    const response = await this.basecampApi.getCardIds(projectId, columnId);
 
     return {
       content: [

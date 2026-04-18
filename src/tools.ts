@@ -259,15 +259,37 @@ export const tools: Tool[] = [
   },
   {
     name: 'basecamp_list_cards',
-    description: 'List all cards in a specific column',
+    description:
+      'List cards in a column. Defaults to auto-paginating — walks every page via Link headers so a 224-card Done column returns as one array instead of the first 15 rows. Pass {single_page: true, page: N} to restrict to a single page (useful for UI-style pagination).',
     inputSchema: {
       type: 'object',
       properties: {
         project_id: { type: 'string' },
-        column_id: { type: 'string' }
+        column_id: { type: 'string' },
+        single_page: {
+          type: 'boolean',
+          description: 'If true, return only one page (default false — walk all pages).',
+        },
+        page: {
+          type: 'number',
+          description: 'Page number when single_page is true (default 1).',
+        },
       },
-      required: ['project_id', 'column_id']
-    }
+      required: ['project_id', 'column_id'],
+    },
+  },
+  {
+    name: 'basecamp_list_card_ids',
+    description:
+      'Compact card listing for iteration — returns only id, title, status, app_url, timestamps, comment count, assignee names, and completed flag for every card in a column. Payload is ~5% of list_cards so this is the right tool when you just need to walk IDs (e.g. to feed basecamp_get_card in a loop over the Done column). Always auto-paginates.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        column_id: { type: 'string' },
+      },
+      required: ['project_id', 'column_id'],
+    },
   },
   {
     name: 'basecamp_get_card',
