@@ -101,27 +101,21 @@ From your app page, note down:
 - **Client ID**
 - **Client Secret**
 
-### Step 3: Get Access Token
+### Step 3: Get an access token
 
-Implement OAuth flow to get your access token:
+Use the ready-made bootstrap in [`oauth/`](./oauth/README.md). Summary:
 
-```typescript
-import { BasecampAPI } from './src/basecamp-api.js';
+1. `cp oauth/oauth-app.example.json oauth/oauth-app.json` and fill in
+   the `client_id`, `client_secret`, and `redirect_uri` from step 2.
+2. Symlink `oauth/helper.php` + `oauth/oauth-app.json` into a local
+   WordPress site's `wp-content/mu-plugins/`.
+3. Visit that site's admin → **Basecamp OAuth** → **Connect to Basecamp**.
+4. Paste the displayed tokens into `config.json`.
+5. Remove the mu-plugin link. The helper is only needed once.
 
-// 1. Get authorization URL
-const authUrl = BasecampAPI.getOAuthUrl(clientId, redirectUri);
-// Direct user to this URL
-
-// 2. Exchange code for token (after OAuth redirect)
-const tokens = await BasecampAPI.exchangeAuthCode(
-  clientId,
-  clientSecret,
-  redirectUri,
-  code
-);
-
-console.log(tokens.access_token); // Use this in your config
-```
+`oauth/refresh-token.sh` keeps the `access_token` refreshed via the
+`refresh_token` — wire it to a cron or run it manually when the token
+expires. Full walkthrough + troubleshooting in `oauth/README.md`.
 
 ## Using with Claude Desktop
 

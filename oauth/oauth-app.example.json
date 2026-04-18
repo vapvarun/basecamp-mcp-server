@@ -1,0 +1,6 @@
+{
+  "_comment": "Copy this file to oauth-app.json and fill in your Basecamp OAuth app credentials. oauth-app.json is gitignored. Register your app at https://launchpad.37signals.com/integrations — pick Type = 'Web application' and set the Redirect URI to match what you set here.",
+  "client_id": "YOUR-40-CHAR-CLIENT-ID-FROM-LAUNCHPAD",
+  "client_secret": "YOUR-40-CHAR-CLIENT-SECRET",
+  "redirect_uri": "http://your-local-site.local/wp-admin/admin-ajax.php?action=basecamp_callback"
+}

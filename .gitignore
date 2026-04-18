@@ -12,8 +12,11 @@ config.json
 .env
 .env.local
 .env.*.local
-# OAuth helper ships with hardcoded client_id + client_secret —
-# keep local only. Paste secrets into config.json at first run.
+# OAuth app credentials live outside version control.
+# oauth/helper.php is safe to commit; oauth/oauth-app.json is not.
+oauth/oauth-app.json
+# Legacy root-level helper (superseded by oauth/helper.php) kept
+# ignored so no one accidentally re-introduces hardcoded secrets.
 basecamp-oauth-helper.php
 
 # Logs
