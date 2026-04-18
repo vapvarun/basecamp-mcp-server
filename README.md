@@ -165,7 +165,15 @@ The Basecamp tools will now be available in Claude.
 ### Card Operations
 
 - `basecamp_list_columns` - List columns in a card table
-- `basecamp_list_cards` - List cards in a column
+- `basecamp_list_cards` - List cards in a column. **Auto-paginates by
+  default** — walks every page via Basecamp's Link header so a column
+  with 200+ cards arrives in one array. Pass `{single_page: true, page: N}`
+  for the old page-by-page behaviour.
+- `basecamp_list_card_ids` - Compact card listing for iteration. Returns
+  only id / title / status / app_url / timestamps / comment count /
+  assignees / completed flag — payload ~5% of `list_cards`. Right tool
+  when you just need to walk IDs (e.g. loop over a Done column and feed
+  each id to `get_card` or `list_comments`). Always auto-paginates.
 - `basecamp_get_card` - Get card details
 - `basecamp_create_card` - Create a new card
 - `basecamp_update_card` - Update card details
