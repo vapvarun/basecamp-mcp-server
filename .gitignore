@@ -12,6 +12,9 @@ config.json
 .env
 .env.local
 .env.*.local
+# OAuth helper ships with hardcoded client_id + client_secret —
+# keep local only. Paste secrets into config.json at first run.
+basecamp-oauth-helper.php
 
 # Logs
 *.log
