@@ -20,6 +20,8 @@ import * as fs from 'fs';
 const LAUNCHPAD_TOKEN_URL = 'https://launchpad.37signals.com/authorization/token';
 /** Refresh this many ms before the token's expires_at. */
 const REFRESH_SKEW_MS = 5 * 60 * 1000;
+/** Hard cap on a single token-refresh request so it can never hang the server. */
+const REFRESH_TIMEOUT_MS = 15 * 1000;
 
 export interface TokenManagerOptions {
   accessToken: string;
@@ -96,16 +98,26 @@ export class TokenManager {
   }
 
   private async doRefresh(): Promise<string> {
-    const res = await fetch(LAUNCHPAD_TOKEN_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        type: 'refresh',
-        client_id: this.clientId as string,
-        client_secret: this.clientSecret as string,
-        refresh_token: this.refreshToken as string,
-      }),
-    });
+    // Hard timeout so a hung Launchpad never blocks getToken() indefinitely.
+    // On abort/timeout this throws; callers (getToken) fall back to the current token.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REFRESH_TIMEOUT_MS);
+    let res: Response;
+    try {
+      res = await fetch(LAUNCHPAD_TOKEN_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          type: 'refresh',
+          client_id: this.clientId as string,
+          client_secret: this.clientSecret as string,
+          refresh_token: this.refreshToken as string,
+        }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
 
     if (!res.ok) {
       const text = await res.text().catch(() => '');
