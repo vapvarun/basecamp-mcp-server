@@ -8,6 +8,8 @@
  * @link https://github.com/vapvarun/basecamp-mcp-server
  */
 
+import { createBasecampClient, isBasecampError, type BasecampClient } from '@37signals/basecamp';
+
 interface BasecampResponse<T = any> {
   code: number;
   data: T;
@@ -35,6 +37,30 @@ export class BasecampAPI {
     this.accessToken = accessToken;
     this.accountId = accountId || '';
     this.userAgent = userAgent;
+  }
+
+  /**
+   * Lazily-built official SDK client (@37signals/basecamp), memoized once the
+   * account id is known. Phase 2 migration: write operations route through this
+   * for typed params + built-in retry instead of hand-rolled fetch calls.
+   */
+  private _sdk?: BasecampClient;
+  private sdkClient(): BasecampClient {
+    if (!this._sdk) {
+      this._sdk = createBasecampClient({
+        accountId: this.accountId,
+        accessToken: this.accessToken,
+        userAgent: this.userAgent,
+      });
+    }
+    return this._sdk;
+  }
+
+  /** Map an SDK error (or any throwable) into the legacy BasecampResponse error shape. */
+  private sdkErrorResponse(err: unknown): BasecampResponse {
+    const httpStatus = isBasecampError(err) ? (err.httpStatus ?? 500) : 500;
+    const message = err instanceof Error ? err.message : String(err);
+    return { code: httpStatus, data: { error: message } as any, headers: {}, error: true, message };
   }
 
   /* ===========================
@@ -461,9 +487,16 @@ export class BasecampAPI {
   }
 
   async moveCard(projectId: string, cardId: string, columnId: string, position?: number) {
-    const data: any = { column_id: columnId };
-    if (position !== undefined) data.position = position;
-    return this.post(`/${this.accountId}/buckets/${projectId}/card_tables/cards/${cardId}/moves.json`, data);
+    // Phase 2: route through the official SDK. The SDK uses account-scoped,
+    // bucket-less card paths, so projectId is not required (kept in the signature
+    // for tool-surface compatibility). SDK errors propagate so a failed move is
+    // surfaced as an error instead of being silently reported as success.
+    await this.getAccountId();
+    await this.sdkClient().cards.move(Number(cardId), {
+      columnId: Number(columnId),
+      ...(position !== undefined ? { position } : {}),
+    });
+    return { code: 200, data: { moved: true, card_id: cardId, column_id: columnId } as any, headers: {} } as BasecampResponse;
   }
 
   async trashCard(projectId: string, cardId: string) {
@@ -553,10 +586,15 @@ export class BasecampAPI {
   }
 
   async createComment(projectId: string, recordingId: string, content: string) {
-    return this.post(
-      `/${this.accountId}/buckets/${projectId}/recordings/${recordingId}/comments.json`,
-      { content }
-    );
+    // Phase 2: route through the official SDK (bucket-less /recordings/{id}/comments.json).
+    // Returns the legacy { code: 201, data } shape on success so callers stay unchanged.
+    await this.getAccountId();
+    try {
+      const comment = await this.sdkClient().comments.create(Number(recordingId), { content });
+      return { code: 201, data: comment as any, headers: {} } as BasecampResponse;
+    } catch (err) {
+      return this.sdkErrorResponse(err);
+    }
   }
 
   async updateComment(projectId: string, commentId: string, content: string) {
