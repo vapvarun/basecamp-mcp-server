@@ -993,6 +993,14 @@ export class BasecampAPI {
    * =========================== */
 
   static parseUrl(url: string): { type: string; accountId: string; projectId: string; recordingId?: string } | null {
+    if (!url || typeof url !== 'string') {
+      throw new Error(
+        'A Basecamp "url" argument is required (the card or todo URL, e.g. ' +
+        'https://3.basecampapi.com/<account>/buckets/<project>/card_tables/cards/<id>.json). ' +
+        'Tools like basecamp_comment / basecamp_comment_with_file take "url" + "comment" - ' +
+        'if you passed project_id / recording_id / content, pass the card "url" and "comment" instead.'
+      );
+    }
     const patterns = {
       card: /basecamp\.com\/(\d+)\/buckets\/(\d+)\/card_tables\/cards\/(\d+)/,
       todo: /basecamp\.com\/(\d+)\/buckets\/(\d+)\/todos\/(\d+)/,

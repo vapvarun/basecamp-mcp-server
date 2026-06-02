@@ -789,6 +789,17 @@ export class BasecampMCPServer {
   }
 
   private async moveCard(projectId: string, cardId: string, toColumn: string, position?: number): Promise<CallToolResult> {
+    if (!projectId || !cardId || !toColumn) {
+      const missing = [
+        !projectId ? 'project_id' : null,
+        !cardId ? 'card_id' : null,
+        !toColumn ? 'to_column' : null,
+      ].filter(Boolean).join(', ');
+      throw new Error(
+        `basecamp_move_card is missing required argument(s): ${missing}. ` +
+        `The target column argument is named "to_column" (the column ID) - if you passed "column_id" or "column", rename it to "to_column".`
+      );
+    }
     await this.basecampApi.getAccountId();
     await this.basecampApi.moveCard(projectId, cardId, toColumn, position);
 
