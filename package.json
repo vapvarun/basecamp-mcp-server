@@ -46,6 +46,7 @@
   "homepage": "https://github.com/vapvarun/basecamp-mcp-server#readme",
   "license": "GPL-2.0-or-later",
   "dependencies": {
+    "@37signals/basecamp": "^0.7.3",
     "@modelcontextprotocol/sdk": "^0.5.0",
     "node-fetch": "^3.3.2"
   },
