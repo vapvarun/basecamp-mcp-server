@@ -1,5 +1,10 @@
 #!/usr/bin/env node
 
+// DEPRECATED: the MCP server now refreshes its access token in-process when
+// BASECAMP_REFRESH_TOKEN + BASECAMP_CLIENT_ID + BASECAMP_CLIENT_SECRET are set
+// (see src/token-manager.ts). Kept only as a manual fallback for first-time
+// setup or recovery; no longer needed for normal operation.
+
 const fs = require('fs');
 const path = require('path');
 

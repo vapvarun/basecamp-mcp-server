@@ -16,7 +16,7 @@ import {
   CallToolResult,
   TextContent,
 } from '@modelcontextprotocol/sdk/types.js';
-import { BasecampAPI } from './basecamp-api.js';
+import { BasecampAPI, type BasecampAuthOptions } from './basecamp-api.js';
 import { IndexManager } from './index-manager.js';
 import { tools } from './tools.js';
 import * as fs from 'fs';
@@ -27,7 +27,7 @@ export class BasecampMCPServer {
   private basecampApi: BasecampAPI;
   private indexManager: IndexManager;
 
-  constructor(accessToken: string, accountId?: string) {
+  constructor(accessToken: string, accountId?: string, auth?: BasecampAuthOptions) {
     this.server = new Server(
       {
         name: 'basecamp-automation-suite',
@@ -40,7 +40,7 @@ export class BasecampMCPServer {
       }
     );
 
-    this.basecampApi = new BasecampAPI(accessToken, accountId);
+    this.basecampApi = new BasecampAPI(accessToken, accountId, 'Basecamp MCP Server', auth);
     this.indexManager = new IndexManager(this.basecampApi);
     this.setupToolHandlers();
   }

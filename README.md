@@ -113,9 +113,15 @@ Use the ready-made bootstrap in [`oauth/`](./oauth/README.md). Summary:
 4. Paste the displayed tokens into `config.json`.
 5. Remove the mu-plugin link. The helper is only needed once.
 
-`oauth/refresh-token.sh` keeps the `access_token` refreshed via the
-`refresh_token` — wire it to a cron or run it manually when the token
-expires. Full walkthrough + troubleshooting in `oauth/README.md`.
+**Automatic refresh (recommended).** If you also provide `BASECAMP_REFRESH_TOKEN`,
+`BASECAMP_CLIENT_ID`, and `BASECAMP_CLIENT_SECRET` (env or `config.json`), the
+server keeps the `access_token` fresh itself - proactively, shortly before it
+expires, and reactively on a `401` - caching the result in
+`.basecamp-token-cache.json`. No cron and no "restart Claude Desktop" step needed.
+
+The legacy `oauth/refresh-token.sh` / `refresh-token.cjs` / `sync-token.sh` scripts
+are now optional (handy for first-time setup or manual recovery) and are no longer
+required once the refresh credentials are configured. Walkthrough in `oauth/README.md`.
 
 ## Using with Claude Desktop
 
@@ -136,7 +142,10 @@ Add the server:
       "args": ["/absolute/path/to/basecamp-mcp-server/build/index.js"],
       "env": {
         "BASECAMP_ACCESS_TOKEN": "your_access_token_here",
-        "BASECAMP_ACCOUNT_ID": "your_account_id"
+        "BASECAMP_ACCOUNT_ID": "your_account_id",
+        "BASECAMP_REFRESH_TOKEN": "your_refresh_token",
+        "BASECAMP_CLIENT_ID": "your_oauth_client_id",
+        "BASECAMP_CLIENT_SECRET": "your_oauth_client_secret"
       }
     }
   }

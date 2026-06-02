@@ -10,19 +10,34 @@
  * @link https://github.com/vapvarun/basecamp-mcp-server
  */
 
+import * as path from 'path';
+import { fileURLToPath } from 'url';
 import { BasecampMCPServer } from './server.js';
 import { loadConfig } from './config.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 async function main() {
   try {
     // Load configuration
     const config = loadConfig();
 
+    // In-process token refresh: if refresh credentials are present, the server
+    // keeps its own access token fresh (proactively + on 401) and caches it,
+    // removing the need for the external refresh-token.cjs / sync-token.sh cron.
+    const auth = {
+      refreshToken: config.refreshToken,
+      clientId: config.clientId,
+      clientSecret: config.clientSecret,
+      cachePath: path.join(__dirname, '..', '.basecamp-token-cache.json'),
+    };
+
     // Initialize and start server
-    const server = new BasecampMCPServer(config.accessToken, config.accountId);
+    const server = new BasecampMCPServer(config.accessToken, config.accountId, auth);
 
     console.error('Starting Basecamp MCP Server...');
     console.error('Access Token:', config.accessToken ? '✓ Configured' : '✗ Missing');
+    console.error('Auto-refresh:', config.refreshToken && config.clientId && config.clientSecret ? '✓ Enabled' : '✗ Disabled (no refresh creds)');
     console.error('Account ID:', config.accountId || 'Will auto-detect');
 
     await server.run();

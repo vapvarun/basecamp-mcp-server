@@ -55,3 +55,6 @@ coverage/
 
 # Index cache (auto-generated)
 index-cache.json
+
+# In-process OAuth token cache (auto-generated, secret)
+.basecamp-token-cache.json

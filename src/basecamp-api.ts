@@ -9,6 +9,15 @@
  */
 
 import { createBasecampClient, isBasecampError, type BasecampClient } from '@37signals/basecamp';
+import { TokenManager } from './token-manager.js';
+
+/** Optional OAuth refresh credentials enabling in-process token refresh. */
+export interface BasecampAuthOptions {
+  refreshToken?: string;
+  clientId?: string;
+  clientSecret?: string;
+  cachePath?: string;
+}
 
 interface BasecampResponse<T = any> {
   code: number;
@@ -33,10 +42,13 @@ export class BasecampAPI {
   private accountId: string;
   private userAgent: string;
 
-  constructor(accessToken: string, accountId?: string, userAgent = 'Basecamp MCP Server') {
+  private tokens: TokenManager;
+
+  constructor(accessToken: string, accountId?: string, userAgent = 'Basecamp MCP Server', auth?: BasecampAuthOptions) {
     this.accessToken = accessToken;
     this.accountId = accountId || '';
     this.userAgent = userAgent;
+    this.tokens = new TokenManager({ accessToken, ...auth });
   }
 
   /**
@@ -49,7 +61,8 @@ export class BasecampAPI {
     if (!this._sdk) {
       this._sdk = createBasecampClient({
         accountId: this.accountId,
-        accessToken: this.accessToken,
+        // Async provider: the SDK fetches a (refreshed-if-needed) token per request.
+        accessToken: () => this.tokens.getToken(),
         userAgent: this.userAgent,
       });
     }
@@ -136,23 +149,25 @@ export class BasecampAPI {
       url += `?${params}`;
     }
 
-    const headers: Record<string, string> = {
-      'Authorization': `Bearer ${this.accessToken}`,
-      'User-Agent': this.userAgent
+    const doFetch = async (token: string) => {
+      const headers: Record<string, string> = {
+        'Authorization': `Bearer ${token}`,
+        'User-Agent': this.userAgent,
+      };
+      const options: RequestInit = { method, headers };
+      if (data) {
+        headers['Content-Type'] = 'application/json';
+        options.body = JSON.stringify(data);
+      }
+      return fetch(url, options);
     };
-
-    const options: RequestInit = {
-      method,
-      headers
-    };
-
-    if (data) {
-      headers['Content-Type'] = 'application/json';
-      options.body = JSON.stringify(data);
-    }
 
     try {
-      const response = await fetch(url, options);
+      let response = await doFetch(await this.tokens.getToken());
+      // Reactive refresh: a 401 means the token went stale mid-session — refresh once and retry.
+      if (response.status === 401 && this.tokens.canRefresh()) {
+        response = await doFetch(await this.tokens.forceRefresh());
+      }
       const responseData = await response.json().catch(() => ({}));
 
       return {
@@ -990,7 +1005,7 @@ export class BasecampAPI {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.accessToken}`,
+          'Authorization': `Bearer ${await this.tokens.getToken()}`,
           'User-Agent': this.userAgent,
           'Content-Type': contentType,
           'Content-Length': fileData.length.toString()
