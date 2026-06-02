@@ -64,11 +64,22 @@ export class BasecampMCPServer {
           case 'basecamp_read':
             return await this.readCard(toolArgs.url, toolArgs.include_comments, toolArgs.include_images);
           case 'basecamp_comment':
-            return await this.postComment(toolArgs.url, toolArgs.comment, toolArgs.attachment_sgids);
+            // Alias-tolerant: accept common arg-name variants so a caller that
+            // passes content/text/body or link still works (canonical: url, comment).
+            return await this.postComment(
+              toolArgs.url ?? toolArgs.link ?? toolArgs.card_url,
+              toolArgs.comment ?? toolArgs.content ?? toolArgs.text ?? toolArgs.body,
+              toolArgs.attachment_sgids
+            );
           case 'basecamp_upload_attachment':
             return await this.uploadAttachment(toolArgs.file_path, toolArgs.file_name, toolArgs.caption);
           case 'basecamp_comment_with_file':
-            return await this.commentWithFile(toolArgs.url, toolArgs.comment, toolArgs.file_path, toolArgs.caption);
+            return await this.commentWithFile(
+              toolArgs.url ?? toolArgs.link ?? toolArgs.card_url,
+              toolArgs.comment ?? toolArgs.content ?? toolArgs.text ?? toolArgs.body,
+              toolArgs.file_path ?? toolArgs.file ?? toolArgs.path,
+              toolArgs.caption
+            );
 
           // Project Management
           case 'basecamp_list_projects':
@@ -109,7 +120,14 @@ export class BasecampMCPServer {
           case 'basecamp_update_card':
             return await this.updateCard(toolArgs);
           case 'basecamp_move_card':
-            return await this.moveCard(toolArgs.project_id, toolArgs.card_id, toolArgs.to_column, toolArgs.position);
+            // Alias-tolerant: canonical arg is to_column, but accept column_id /
+            // column / to_column_id so a near-miss still moves the card.
+            return await this.moveCard(
+              toolArgs.project_id,
+              toolArgs.card_id,
+              toolArgs.to_column ?? toolArgs.column_id ?? toolArgs.column ?? toolArgs.to_column_id,
+              toolArgs.position
+            );
           case 'basecamp_trash_card':
             return await this.trashCard(toolArgs.project_id, toolArgs.card_id);
 

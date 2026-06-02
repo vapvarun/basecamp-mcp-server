@@ -12,7 +12,7 @@
     "start": "node build/index.js",
     "dev": "tsc --watch",
     "prepare": "npm run build",
-    "test": "echo \"Tests coming soon\" && exit 0"
+    "test": "npm run build && node --test test/*.test.mjs"
   },
   "keywords": [
     "mcp",
