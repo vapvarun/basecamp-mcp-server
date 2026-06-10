@@ -98,28 +98,12 @@ export class IndexManager {
       projects: []
     };
 
-    // Fetch all projects with pagination
-    let allProjects: any[] = [];
-    let page = 1;
-    let hasMore = true;
-
-    while (hasMore) {
-      const response = await this.api.getProjects('active', page);
-      const projects = response.data;
-
-      if (!projects || projects.length === 0) {
-        hasMore = false;
-        break;
-      }
-
-      allProjects = allProjects.concat(projects);
-      page++;
-
-      // Check if there are more pages (Basecamp returns empty array when done)
-      if (projects.length < 100) {
-        hasMore = false;
-      }
-    }
+    // Fetch all projects by following the RFC 5988 Link header (rel="next"),
+    // never hand-incrementing page numbers and never sending status=active
+    // (the default). getAllProjects()/getAll() stop on any 4xx/5xx, so a
+    // rejected request can no longer trigger runaway paging.
+    const projectsResponse = await this.api.getAllProjects();
+    const allProjects: any[] = Array.isArray( projectsResponse.data ) ? projectsResponse.data : [];
 
     console.log(`   Found ${allProjects.length} projects`);
 

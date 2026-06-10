@@ -121,8 +121,8 @@ export const tools: Tool[] = [
       properties: {
         status: {
           type: 'string',
-          enum: ['active', 'archived', 'trashed'],
-          description: 'Filter projects by status (default: active)'
+          enum: ['archived', 'trashed'],
+          description: 'Optional. Omit to list active projects (the default). Pass "archived" or "trashed" to list those instead. Do not pass "active" — Basecamp rejects it.'
         }
       }
     }

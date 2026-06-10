@@ -38,3 +38,12 @@ test('basecamp_comment_with_file requires url + comment + file_path', () => {
     assert.ok(req.includes(k), `expected ${k} in required, got: ${req.join(', ')}`);
   }
 });
+
+test('basecamp_list_projects status enum must NOT offer "active" (Basecamp rejects it)', () => {
+  const t = byName['basecamp_list_projects'];
+  assert.ok(t, 'basecamp_list_projects should be defined');
+  const statusEnum = t.inputSchema?.properties?.status?.enum ?? [];
+  assert.ok(!statusEnum.includes('active'), `status enum must omit "active" (default = omit param), got: ${statusEnum.join(', ')}`);
+  // archived/trashed remain valid filters.
+  assert.ok(statusEnum.includes('archived') && statusEnum.includes('trashed'), `expected archived+trashed, got: ${statusEnum.join(', ')}`);
+});

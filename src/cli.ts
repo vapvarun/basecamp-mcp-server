@@ -44,43 +44,16 @@ async function getAssignedCards(projectQuery: string, userName: string) {
   // Search directly via API with pagination until we find matches
   console.log('📦 Searching projects...\n');
 
-  let page = 1;
-  let matchingProjects: any[] = [];
-  let totalChecked = 0;
   const lowerQuery = projectQuery.toLowerCase();
 
-  // Search through projects page by page
-  while (page <= 10) {  // Limit to first 10 pages (up to 500 projects)
-    const response = await api.getProjects(undefined, page);
-
-    const pageProjects = response.data;
-
-    if (!pageProjects || !Array.isArray(pageProjects)) {
-      break;
-    }
-
-    if (pageProjects.length === 0) {
-      break;
-    }
-
-    totalChecked += pageProjects.length;
-
-    // Check for matches on this page
-    const matches = pageProjects.filter((p: any) =>
-      p.name.toLowerCase().includes(lowerQuery)
-    );
-
-    if (matches.length > 0) {
-      matchingProjects = matchingProjects.concat(matches);
-      console.log(`   Found ${matches.length} match(es) on page ${page}`);
-    }
-
-    page++;
-
-    if (pageProjects.length < 100) {
-      break;
-    }
-  }
+  // List every project via the Link header (no hand-built page numbers, no
+  // status=active), then match client-side.
+  const projectsResponse = await api.getAllProjects();
+  const allProjects: any[] = Array.isArray( projectsResponse.data ) ? projectsResponse.data : [];
+  const matchingProjects = allProjects.filter( ( p: any ) =>
+    p.name.toLowerCase().includes( lowerQuery )
+  );
+  const totalChecked = allProjects.length;
 
   console.log(`   Checked ${totalChecked} projects\n`);
 

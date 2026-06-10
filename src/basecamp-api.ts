@@ -284,8 +284,26 @@ export class BasecampAPI {
 
   async getProjects(status?: 'active' | 'archived' | 'trashed', page = 1) {
     const query: Record<string, string> = { page: page.toString() };
-    if (status) query.status = status;
+    // Basecamp only accepts status=archived|trashed. "active" is the default and
+    // must NOT be sent — it is rejected as an invalid value (400). Omit it.
+    if ( status === 'archived' || status === 'trashed' ) {
+      query.status = status;
+    }
     return this.get(`/${this.accountId}/projects.json`, query);
+  }
+
+  /**
+   * List every project, following the RFC 5988 Link header (rel="next") rather
+   * than hand-incrementing page numbers. Never sends status=active (the
+   * default). getAll() stops on any 4xx/5xx, so a rejected request can never
+   * trigger runaway paging.
+   */
+  async getAllProjects(status?: 'archived' | 'trashed') {
+    const query: Record<string, string> = {};
+    if ( status === 'archived' || status === 'trashed' ) {
+      query.status = status;
+    }
+    return this.getAll(`/${this.accountId}/projects.json`, query);
   }
 
   async getProject(projectId: string) {
