@@ -553,32 +553,39 @@ export class BasecampMCPServer {
     }
   }
 
+  /**
+   * Standard tool result from a Basecamp API response: pretty-printed JSON on
+   * success, or a surfaced `isError` result when the request failed (4xx/5xx).
+   * Stops failed calls from returning an empty error body that looks like data.
+   */
+  private jsonResult(response: { error?: boolean; message?: string; code?: number; data?: any }): CallToolResult {
+    if (response.error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error: ${response.message || `Basecamp API error (${response.code ?? 'unknown'})`}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+    const text = JSON.stringify(response.data, null, 2);
+    return { content: [{ type: 'text', text }] };
+  }
+
   private async listProjects(status?: string): Promise<CallToolResult> {
     await this.basecampApi.getAccountId();
     const response = await this.basecampApi.getProjects(status as any);
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async getProject(projectId: string): Promise<CallToolResult> {
     await this.basecampApi.getAccountId();
     const response = await this.basecampApi.getProject(projectId);
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async createProject(name: string, description = ''): Promise<CallToolResult> {
@@ -626,14 +633,7 @@ export class BasecampMCPServer {
     await this.basecampApi.getAccountId();
     const response = await this.basecampApi.getProjectDock(projectId);
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async trashProject(projectId: string): Promise<CallToolResult> {
@@ -654,22 +654,13 @@ export class BasecampMCPServer {
     await this.basecampApi.getAccountId();
     const response = await this.basecampApi.getColumns(projectId, tableId);
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async getColumn(projectId: string, columnId: string): Promise<CallToolResult> {
     await this.basecampApi.getAccountId();
     const response = await this.basecampApi.getColumn(projectId, columnId);
-    return {
-      content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }],
-    };
+    return this.jsonResult(response);
   }
 
   private async createColumn(projectId: string, cardTableId: string, title: string, description?: string): Promise<CallToolResult> {
@@ -699,42 +690,21 @@ export class BasecampMCPServer {
       ? await this.basecampApi.getCards(projectId, columnId, page)
       : await this.basecampApi.getAllCards(projectId, columnId);
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async listCardIds(projectId: string, columnId: string): Promise<CallToolResult> {
     await this.basecampApi.getAccountId();
     const response = await this.basecampApi.getCardIds(projectId, columnId);
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async getCard(projectId: string, cardId: string): Promise<CallToolResult> {
     await this.basecampApi.getAccountId();
     const response = await this.basecampApi.getCard(projectId, cardId);
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async createCard(args: any): Promise<CallToolResult> {
@@ -897,14 +867,7 @@ export class BasecampMCPServer {
     await this.basecampApi.getAccountId();
     const response = await this.basecampApi.getSteps(projectId, cardId);
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async addStep(projectId: string, cardId: string, title: string, dueOn?: string, assignees?: string): Promise<CallToolResult> {
@@ -971,42 +934,21 @@ export class BasecampMCPServer {
       ? await this.basecampApi.getProjectPeople(projectId)
       : await this.basecampApi.getPeople();
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async getPerson(personId: string): Promise<CallToolResult> {
     await this.basecampApi.getAccountId();
     const response = await this.basecampApi.getPerson(personId);
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async getTodo(projectId: string, todoId: string): Promise<CallToolResult> {
     await this.basecampApi.getAccountId();
     const response = await this.basecampApi.getTodo(projectId, todoId);
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async createTodo(args: any): Promise<CallToolResult> {
@@ -1137,62 +1079,27 @@ export class BasecampMCPServer {
       return { content: [{ type: 'text', text: 'No todoset found in this project' }] };
     }
     const response = await this.basecampApi.getTodoSet(projectId, String(todoset.id));
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async listTodoLists(projectId: string, todosetId: string, status?: string): Promise<CallToolResult> {
     const response = await this.basecampApi.getTodoLists(projectId, todosetId, status);
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async getTodoList(projectId: string, todolistId: string): Promise<CallToolResult> {
     const response = await this.basecampApi.getTodoList(projectId, todolistId);
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async createTodoList(projectId: string, todosetId: string, name: string, description?: string): Promise<CallToolResult> {
     const response = await this.basecampApi.createTodoList(projectId, todosetId, name, description || '');
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async updateTodoList(projectId: string, todolistId: string, name?: string, description?: string): Promise<CallToolResult> {
     const response = await this.basecampApi.updateTodoList(projectId, todolistId, name, description);
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   /* ===========================
@@ -1201,27 +1108,13 @@ export class BasecampMCPServer {
 
   private async listTodos(projectId: string, todolistId: string, status?: string, completed?: boolean): Promise<CallToolResult> {
     const response = await this.basecampApi.getTodos(projectId, todolistId, status, completed);
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async updateTodo(args: any): Promise<CallToolResult> {
     const { project_id, todo_id, ...updates } = args;
     const response = await this.basecampApi.updateTodo(project_id, todo_id, updates);
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   /* ===========================
@@ -1230,26 +1123,12 @@ export class BasecampMCPServer {
 
   private async listMessages(projectId: string, messageBoardId: string): Promise<CallToolResult> {
     const response = await this.basecampApi.getMessages(projectId, messageBoardId);
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async getMessage(projectId: string, messageId: string): Promise<CallToolResult> {
     const response = await this.basecampApi.getMessage(projectId, messageId);
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async createMessage(projectId: string, messageBoardId: string, subject: string, content: string, attachmentSgids?: string[]): Promise<CallToolResult> {
@@ -1279,14 +1158,7 @@ export class BasecampMCPServer {
 
   private async updateMessage(projectId: string, messageId: string, subject?: string, content?: string): Promise<CallToolResult> {
     const response = await this.basecampApi.updateMessage(projectId, messageId, subject, content);
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async pinMessage(projectId: string, messageId: string): Promise<CallToolResult> {
@@ -1308,13 +1180,13 @@ export class BasecampMCPServer {
   private async listVaults(projectId: string, vaultId: string): Promise<CallToolResult> {
     await this.basecampApi.getAccountId();
     const response = await this.basecampApi.getVaults(projectId, vaultId);
-    return { content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }] };
+    return this.jsonResult(response);
   }
 
   private async getVault(projectId: string, vaultId: string): Promise<CallToolResult> {
     await this.basecampApi.getAccountId();
     const response = await this.basecampApi.getVault(projectId, vaultId);
-    return { content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }] };
+    return this.jsonResult(response);
   }
 
   private async createVault(projectId: string, parentVaultId: string, title: string): Promise<CallToolResult> {
@@ -1335,50 +1207,22 @@ export class BasecampMCPServer {
 
   private async listDocuments(projectId: string, vaultId: string): Promise<CallToolResult> {
     const response = await this.basecampApi.getDocuments(projectId, vaultId);
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async getDocument(projectId: string, documentId: string): Promise<CallToolResult> {
     const response = await this.basecampApi.getDocument(projectId, documentId);
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async createDocument(projectId: string, vaultId: string, title: string, content: string): Promise<CallToolResult> {
     const response = await this.basecampApi.createDocument(projectId, vaultId, title, content);
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async updateDocument(projectId: string, documentId: string, title?: string, content?: string): Promise<CallToolResult> {
     const response = await this.basecampApi.updateDocument(projectId, documentId, title, content);
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   /* ===========================
@@ -1388,13 +1232,13 @@ export class BasecampMCPServer {
   private async listUploads(projectId: string, vaultId: string): Promise<CallToolResult> {
     await this.basecampApi.getAccountId();
     const response = await this.basecampApi.getUploads(projectId, vaultId);
-    return { content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }] };
+    return this.jsonResult(response);
   }
 
   private async getUpload(projectId: string, uploadId: string): Promise<CallToolResult> {
     await this.basecampApi.getAccountId();
     const response = await this.basecampApi.getUpload(projectId, uploadId);
-    return { content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }] };
+    return this.jsonResult(response);
   }
 
   private async createUpload(projectId: string, vaultId: string, attachableSgid: string, description?: string, baseName?: string): Promise<CallToolResult> {
@@ -1415,26 +1259,12 @@ export class BasecampMCPServer {
 
   private async listScheduleEntries(projectId: string, scheduleId: string, status?: string, startDate?: string, endDate?: string): Promise<CallToolResult> {
     const response = await this.basecampApi.getScheduleEntries(projectId, scheduleId, status, startDate, endDate);
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async getScheduleEntry(projectId: string, entryId: string): Promise<CallToolResult> {
     const response = await this.basecampApi.getScheduleEntry(projectId, entryId);
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async createScheduleEntry(args: any): Promise<CallToolResult> {
@@ -1447,27 +1277,13 @@ export class BasecampMCPServer {
       ends_at,
       { description, participant_ids, all_day, notify }
     );
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async updateScheduleEntry(args: any): Promise<CallToolResult> {
     const { project_id, entry_id, ...updates } = args;
     const response = await this.basecampApi.updateScheduleEntry(project_id, entry_id, updates);
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   /* ===========================
@@ -1476,38 +1292,17 @@ export class BasecampMCPServer {
 
   private async listCampfires(): Promise<CallToolResult> {
     const response = await this.basecampApi.getCampfires();
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async getCampfire(projectId: string, campfireId: string): Promise<CallToolResult> {
     const response = await this.basecampApi.getCampfire(projectId, campfireId);
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async listCampfireLines(projectId: string, campfireId: string): Promise<CallToolResult> {
     const response = await this.basecampApi.getCampfireLines(projectId, campfireId);
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2),
-        },
-      ],
-    };
+    return this.jsonResult(response);
   }
 
   private async createCampfireLine(projectId: string, campfireId: string, content: string, attachmentSgids?: string[]): Promise<CallToolResult> {
@@ -1548,7 +1343,7 @@ export class BasecampMCPServer {
   private async listPingablePeople(): Promise<CallToolResult> {
     await this.basecampApi.getAccountId();
     const response = await this.basecampApi.getPingablePeople();
-    return { content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }] };
+    return this.jsonResult(response);
   }
 
   private async manageProjectPeople(projectId: string, grant?: number[], revoke?: number[]): Promise<CallToolResult> {

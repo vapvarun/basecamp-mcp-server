@@ -33,6 +33,31 @@ interface OAuthTokenResponse {
   expires_in: number;
 }
 
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Client-side rate governor. Basecamp allows ~50 requests / 10s per token; we
+ * cap below that with a minimum interval between request starts. The gate is
+ * module-level (shared across every request and instance) and serialized via a
+ * promise chain, so concurrent callers — e.g. Link-header page walks — queue
+ * instead of bursting. This is the backstop that keeps any future bug from
+ * turning into tens of thousands of requests.
+ */
+const RATE_MIN_INTERVAL_MS = 220; // ~45 req / 10s, safely under the 50/10s limit.
+let rateLastStart = 0;
+let rateGateChain: Promise<void> = Promise.resolve();
+
+function rateGate(): Promise<void> {
+  rateGateChain = rateGateChain.then(async () => {
+    const wait = rateLastStart + RATE_MIN_INTERVAL_MS - Date.now();
+    if (wait > 0) {
+      await sleep(wait);
+    }
+    rateLastStart = Date.now();
+  });
+  return rateGateChain;
+}
+
 export class BasecampAPI {
   private static readonly API_BASE = 'https://3.basecampapi.com';
   private static readonly OAUTH_BASE = 'https://launchpad.37signals.com';
@@ -163,18 +188,42 @@ export class BasecampAPI {
     };
 
     try {
+      // Rate governor: never start two requests closer than RATE_MIN_INTERVAL_MS.
+      await rateGate();
       let response = await doFetch(await this.tokens.getToken());
+
       // Reactive refresh: a 401 means the token went stale mid-session — refresh once and retry.
       if (response.status === 401 && this.tokens.canRefresh()) {
+        await rateGate();
         response = await doFetch(await this.tokens.forceRefresh());
       }
+
+      // Honor 429 Too Many Requests with one bounded retry on Retry-After.
+      if (response.status === 429) {
+        const retryAfter = Number(response.headers.get('Retry-After')) || 2;
+        await sleep(Math.min(Math.max(retryAfter, 1), 30) * 1000);
+        await rateGate();
+        response = await doFetch(await this.tokens.getToken());
+      }
+
       const responseData = await response.json().catch(() => ({}));
 
-      return {
+      const result: BasecampResponse<T> = {
         code: response.status,
         data: responseData,
         headers: Object.fromEntries(response.headers.entries())
       };
+
+      // Surface 4xx/5xx as a real error so callers don't treat an error body as
+      // a successful result (previously a 400's `{}` body looked like success).
+      if (response.status >= 400) {
+        result.error = true;
+        result.message =
+          (responseData && (responseData.error || responseData.message)) ||
+          `Basecamp API ${response.status} ${response.statusText || ''}`.trim();
+      }
+
+      return result;
     } catch (error) {
       return {
         code: 0,
