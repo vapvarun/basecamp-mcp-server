@@ -373,6 +373,30 @@ Make sure the URL format is correct:
 3. Restart Claude Desktop completely
 4. Check Claude Desktop logs for errors
 
+### "Failed to fetch projects" / 400 Bad Request / runaway requests
+
+If `basecamp_list_projects` / `basecamp_find_project` return empty or "Failed to
+fetch projects", you are almost certainly running a **stale build**. Run
+`git pull && npm run build` and **restart the MCP server** so the new `build/`
+loads (a rebuild alone does not restart the already-spawned stdio process).
+
+This symptom came from two Basecamp API-contract violations that are now fixed in
+the client — keep them in mind if you touch `getProjects`/`getAll`:
+
+1. **Never send `status=active` on `/projects.json`.** Basecamp only accepts
+   `status=archived` or `status=trashed`; `active` is the default and is rejected
+   as an invalid value (**400 Bad Request**). To list active projects, omit the
+   `status` parameter entirely.
+2. **Never hand-build `page=N` numbers.** Follow the RFC 5988 `Link` header
+   (`rel="next"`) until it's absent, and stop on any non-2xx response. Manually
+   incrementing `page` against a perpetually-400ing endpoint produces tens of
+   thousands of failed requests (we observed `page=55940`) and gets the source
+   **IP blocked** by Basecamp. `getAll()` enforces this (Link-header walk, stops
+   on 4xx/5xx, `maxPages` cap).
+
+If your IP was blocked during such a runaway, deploy the fixed build and contact
+Basecamp support to request an unblock.
+
 ## API Reference
 
 Full Basecamp API documentation: [https://github.com/basecamp/bc3-api](https://github.com/basecamp/bc3-api)
