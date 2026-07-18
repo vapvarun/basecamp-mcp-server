@@ -214,6 +214,23 @@ async function updateCard(projectId: string, cardId: string, pairs: string[]) {
   }
 }
 
+// ---- move-card (move a card to another column) ----
+async function moveCard(projectRef: string, cardId: string, columnRef: string) {
+  const api = await makeApi();
+  const index = new IndexManager(api);
+  const project = await resolveProject(api, index, projectRef);
+  if (!project) { console.log(`❌ Project not found: "${projectRef}"`); process.exit(1); }
+  const column = resolveColumn(project!, columnRef);
+  if (!column) { console.log(`❌ Column "${columnRef}" not found in ${project!.name}`); process.exit(1); }
+  const res = await api.moveCard(project!.id, cardId, column!.id);
+  if (res.code >= 200 && res.code < 300) {
+    console.log(`✅ Card ${cardId} moved to "${column!.title}" (column ${column!.id})`);
+  } else {
+    console.log(`❌ Move failed (HTTP ${res.code}): ${JSON.stringify(res.data)}`);
+    process.exit(1);
+  }
+}
+
 // ---- list-cards (dedup: cards in a column) ----
 async function listCards(projectRef: string, columnRef: string) {
   const api = await makeApi();
@@ -281,12 +298,14 @@ Basecamp CLI (read + write)
   create-card  <project> <column> <title> [htmlBody]  # column = id or title (e.g. "Bugs")
   comment      <cardId> <text>
   update-card  <projectId> <cardId> field=value ...   # fields: title, content, due_on, completed, assignee_ids(csv)
+  move-card    <project> <cardId> <column>            # column = id or title (e.g. "Ready for Testing")
 
 Examples:
   node build/cli.js list-columns 43067220
   node build/cli.js list-cards 43067220 "Bugs"
   node build/cli.js create-card 43067220 "Bugs" "[SUPPORT] cover photo reverts" "<p>Repro...</p>"
   node build/cli.js comment 9012345678 "Verified on Docker; root cause in class-foo.php"
+  node build/cli.js move-card 46914016 10086766037 "Ready for Testing"
 `;
 
 (async () => {
@@ -326,6 +345,10 @@ Examples:
       case 'update-card':
         if (args.length < 4) { console.log('Usage: update-card <projectId> <cardId> field=value ...'); process.exit(1); }
         await updateCard(args[1], args[2], args.slice(3));
+        break;
+      case 'move-card':
+        if (args.length < 4) { console.log('Usage: move-card <project> <cardId> <column>'); process.exit(1); }
+        await moveCard(args[1], args[2], args.slice(3).join(' '));
         break;
       default:
         console.log(USAGE);
