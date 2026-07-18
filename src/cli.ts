@@ -214,6 +214,23 @@ async function updateCard(projectId: string, cardId: string, pairs: string[]) {
   }
 }
 
+// ---- comments (read a card's comment thread) ----
+async function listComments(projectId: string, cardId: string) {
+  const api = await makeApi();
+  const res = await api.getComments(projectId, cardId);
+  const comments: any[] = Array.isArray(res.data) ? res.data : [];
+  if (!comments.length) { console.log(`\n(no comments on card ${cardId})\n`); return; }
+  console.log(`\n💬 ${comments.length} comment(s) on card ${cardId}\n`);
+  for (const c of comments) {
+    const who = c.creator?.name ?? 'unknown';
+    const when = c.created_at ?? '';
+    // Strip HTML tags for a readable terminal view.
+    const text = String(c.content ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    console.log(`— ${who}  ${when}`);
+    console.log(`  ${text}\n`);
+  }
+}
+
 // ---- move-card (move a card to another column) ----
 async function moveCard(projectRef: string, cardId: string, columnRef: string) {
   const api = await makeApi();
@@ -299,6 +316,7 @@ Basecamp CLI (read + write)
   comment      <cardId> <text>
   update-card  <projectId> <cardId> field=value ...   # fields: title, content, due_on, completed, assignee_ids(csv)
   move-card    <project> <cardId> <column>            # column = id or title (e.g. "Ready for Testing")
+  comments     <projectId> <cardId>                   # read a card's comment thread
 
 Examples:
   node build/cli.js list-columns 43067220
@@ -349,6 +367,10 @@ Examples:
       case 'move-card':
         if (args.length < 4) { console.log('Usage: move-card <project> <cardId> <column>'); process.exit(1); }
         await moveCard(args[1], args[2], args.slice(3).join(' '));
+        break;
+      case 'comments':
+        if (args.length < 3) { console.log('Usage: comments <projectId> <cardId>'); process.exit(1); }
+        await listComments(args[1], args[2]);
         break;
       default:
         console.log(USAGE);
