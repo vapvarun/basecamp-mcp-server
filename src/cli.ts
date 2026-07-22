@@ -73,6 +73,22 @@ function resolveColumn(project: ProjectIndex, columnRef: string): Column | null 
   return null;
 }
 
+// ---- list-people ----
+async function listPeople(filter?: string) {
+  const api = await makeApi();
+  const peopleResponse = await api.getPeople();
+  const people: any[] = peopleResponse.data;
+  const lower = (filter || '').toLowerCase();
+  const matched = lower
+    ? people.filter((p: any) =>
+        p.name.toLowerCase().includes(lower) || (p.email_address || '').toLowerCase().includes(lower))
+    : people;
+  console.log(`\n👥 ${matched.length} people${filter ? ` matching "${filter}"` : ''}\n`);
+  for (const p of matched) {
+    console.log(`   ${String(p.id).padEnd(10)} ${p.name}  <${p.email_address}>${p.admin ? '  [admin]' : ''}`);
+  }
+}
+
 // ---- get-cards (unchanged behaviour) ----
 async function getAssignedCards(projectQuery: string, userName: string) {
   const api = await makeApi();
@@ -371,6 +387,9 @@ Examples:
       case 'comments':
         if (args.length < 3) { console.log('Usage: comments <projectId> <cardId>'); process.exit(1); }
         await listComments(args[1], args[2]);
+        break;
+      case 'list-people':
+        await listPeople(args[1]);
         break;
       default:
         console.log(USAGE);
