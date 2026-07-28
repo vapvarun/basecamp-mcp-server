@@ -20,6 +20,7 @@
  * Card bodies accept HTML (Basecamp rich text).
  */
 
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { BasecampAPI } from './basecamp-api.js';
@@ -208,6 +209,44 @@ async function addComment(cardId: string, text: string) {
   }
 }
 
+// ---- comment-file (upload an image/file, post it as a comment attachment) ----
+const CONTENT_TYPE_BY_EXT: Record<string, string> = {
+  '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+  '.gif': 'image/gif', '.webp': 'image/webp', '.pdf': 'application/pdf',
+  '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime',
+};
+
+async function commentFile(cardId: string, filePath: string, caption: string) {
+  if (!fs.existsSync(filePath)) {
+    console.log(`❌ File not found: ${filePath}`);
+    process.exit(1);
+  }
+  const api = await makeApi();
+  const fileData = fs.readFileSync(filePath);
+  const fileName = path.basename(filePath);
+  const ext = path.extname(filePath).toLowerCase();
+  const contentType = CONTENT_TYPE_BY_EXT[ext] || 'application/octet-stream';
+
+  // Upload the file to get an attachable_sgid, then embed it in a comment.
+  await api.getAccountId();
+  const up = await api.uploadAttachment(fileData, fileName, contentType);
+  const sgid = (up.data as any)?.attachable_sgid;
+  if (up.error || !sgid) {
+    console.log(`❌ Upload failed (HTTP ${up.code}): ${up.message || JSON.stringify(up.data)}`);
+    process.exit(1);
+  }
+
+  const tag = BasecampAPI.createAttachmentTag(sgid, caption || fileName);
+  const content = caption ? `<div>${caption}</div>${tag}` : tag;
+  const res = await api.createComment('', cardId, content);
+  if (res.code >= 200 && res.code < 300) {
+    console.log(`✅ File comment added to card ${cardId} (${fileName}, comment id: ${(res.data as any)?.id ?? '?'})`);
+  } else {
+    console.log(`❌ Comment failed (HTTP ${res.code}): ${JSON.stringify(res.data)}`);
+    process.exit(1);
+  }
+}
+
 // ---- update-card ----
 async function updateCard(projectId: string, cardId: string, pairs: string[]) {
   const api = await makeApi();
@@ -330,6 +369,7 @@ Basecamp CLI (read + write)
   parse-url    <basecampCardUrl>                      # url -> {projectId, cardId}
   create-card  <project> <column> <title> [htmlBody]  # column = id or title (e.g. "Bugs")
   comment      <cardId> <text>
+  comment-file <cardId> <filePath> [caption]          # upload an image/file + post it as a comment attachment
   update-card  <projectId> <cardId> field=value ...   # fields: title, content, due_on, completed, assignee_ids(csv)
   move-card    <project> <cardId> <column>            # column = id or title (e.g. "Ready for Testing")
   comments     <projectId> <cardId>                   # read a card's comment thread
@@ -375,6 +415,10 @@ Examples:
       case 'comment':
         if (args.length < 3) { console.log('Usage: comment <cardId> <text>'); process.exit(1); }
         await addComment(args[1], args.slice(2).join(' '));
+        break;
+      case 'comment-file':
+        if (args.length < 3) { console.log('Usage: comment-file <cardId> <filePath> [caption]'); process.exit(1); }
+        await commentFile(args[1], args[2], args.slice(3).join(' '));
         break;
       case 'update-card':
         if (args.length < 4) { console.log('Usage: update-card <projectId> <cardId> field=value ...'); process.exit(1); }
