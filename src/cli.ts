@@ -63,14 +63,54 @@ async function resolveProject(api: BasecampAPI, index: IndexManager, ref: string
   return index.updateProjectIndex(projectId);
 }
 
+/**
+ * Resolve a column reference (id or title) to a single, unambiguous column.
+ *
+ * The previous version returned the FIRST substring match, which silently picks
+ * the wrong column on any board whose titles nest inside one another. On the
+ * standard Wbcom board that is not hypothetical:
+ *
+ *   "Testing"     matches "Ready for Testing" AND "In Testing"
+ *   "Development" matches "Ready for Development" AND "In Development"
+ *   "Ready"       matches "Ready for Development" AND "Ready for Testing"
+ *
+ * A card moved to the wrong column still printed a success line naming the
+ * column the caller asked for, so the mistake stayed invisible until someone
+ * re-read the board. Moving a card is a write to a shared workspace: guessing is
+ * worse than failing, because a card silently parked in the wrong column never
+ * gets picked up.
+ *
+ * Order: exact id, then exact title, then a UNIQUE substring. An ambiguous
+ * substring returns null (with the candidates printed) instead of choosing one.
+ */
 function resolveColumn(project: ProjectIndex, columnRef: string): Column | null {
-  const lower = columnRef.toLowerCase();
-  for (const table of project.cardTables) {
-    const byId = table.columns.find(c => c.id === columnRef);
-    if (byId) return byId;
-    const byTitle = table.columns.find(c => c.title.toLowerCase().includes(lower));
-    if (byTitle) return byTitle;
+  const ref = String(columnRef).trim();
+  const lower = ref.toLowerCase();
+
+  const all: Column[] = [];
+  for (const table of project.cardTables) all.push(...table.columns);
+
+  // 1. Exact id. String-compare both sides so a numeric ref still matches an
+  //    index that happened to store the id as a number.
+  const byId = all.find(c => String(c.id) === ref);
+  if (byId) return byId;
+
+  // 2. Exact title (case-insensitive), so a literal "Testing" column can never
+  //    be beaten by "Ready for Testing" merely appearing earlier.
+  const byExactTitle = all.find(c => c.title.toLowerCase() === lower);
+  if (byExactTitle) return byExactTitle;
+
+  // 3. Substring, but only when it identifies exactly one column.
+  const partial = all.filter(c => c.title.toLowerCase().includes(lower));
+  if (partial.length === 1) return partial[0];
+
+  if (partial.length > 1) {
+    console.log(
+      `❌ Column "${ref}" is ambiguous — matches: ${partial.map(c => `"${c.title}"`).join(', ')}.\n` +
+      `   Use the exact title or the column id.`
+    );
   }
+
   return null;
 }
 
