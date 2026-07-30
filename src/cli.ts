@@ -351,7 +351,11 @@ async function listCards(projectRef: string, columnRef: string) {
   if (!project) { console.log(`❌ Project not found: "${projectRef}"`); process.exit(1); }
   const column = resolveColumn(project!, columnRef);
   if (!column) { console.log(`❌ Column "${columnRef}" not found in ${project!.name}`); process.exit(1); }
-  const res = await api.getCards(project!.id, column!.id);
+  // getAllCards, not getCards: Basecamp pages this endpoint, so the single-page
+  // call silently capped every listing. A 77-card column read as exactly 50 with
+  // nothing to say it was truncated — a partial backlog that looks complete is
+  // worse than an error, because you plan against it.
+  const res = await api.getAllCards(project!.id, column!.id);
   const cards: any[] = Array.isArray(res.data) ? res.data : [];
   console.log(`\n📋 ${project!.name} / ${column!.title} — ${cards.length} card(s)\n`);
   for (const c of cards) {
