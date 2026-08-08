@@ -398,6 +398,21 @@ async function findProject(query: string) {
   matches.forEach((p: any) => console.log(`   ${p.id}  —  ${p.name}`));
 }
 
+async function renameProject(projectId: string, newName: string) {
+  const api = await makeApi();
+  const before = await api.getProject(projectId);
+  const oldName = before?.data?.name ?? '(unknown)';
+  await api.updateProject(projectId, newName);
+  // Re-read: updateProject returning 200 is not proof the name took.
+  const after = await api.getProject(projectId);
+  const nowName = after?.data?.name ?? '(unknown)';
+  if (nowName !== newName) {
+    console.log(`❌ Rename did not take. Still "${nowName}" (wanted "${newName}")`);
+    process.exit(1);
+  }
+  console.log(`✅ ${projectId}: "${oldName}" → "${nowName}"`);
+}
+
 // ---- dispatch ----
 const args = process.argv.slice(2);
 const command = args[0];
@@ -417,6 +432,7 @@ Basecamp CLI (read + write)
   update-card  <projectId> <cardId> field=value ...   # fields: title, content, due_on, completed, assignee_ids(csv)
   move-card    <project> <cardId> <column>            # column = id or title (e.g. "Ready for Testing")
   comments     <projectId> <cardId>                   # read a card's comment thread
+  rename-project <projectId> <newName>                # rename a project (re-reads to confirm)
 
 Examples:
   node build/cli.js list-columns 43067220
@@ -424,6 +440,7 @@ Examples:
   node build/cli.js create-card 43067220 "Bugs" "[SUPPORT] cover photo reverts" "<p>Repro...</p>"
   node build/cli.js comment 9012345678 "Verified on Docker; root cause in class-foo.php"
   node build/cli.js move-card 46914016 10086766037 "Ready for Testing"
+  node build/cli.js rename-project 38827449 "Price Quote for WooCommerce"
 `;
 
 (async () => {
@@ -475,6 +492,10 @@ Examples:
       case 'comments':
         if (args.length < 3) { console.log('Usage: comments <projectId> <cardId>'); process.exit(1); }
         await listComments(args[1], args[2]);
+        break;
+      case 'rename-project':
+        if (args.length < 3) { console.log('Usage: rename-project <projectId> <newName>'); process.exit(1); }
+        await renameProject(args[1], args.slice(2).join(' '));
         break;
       case 'list-people':
         await listPeople(args[1]);
