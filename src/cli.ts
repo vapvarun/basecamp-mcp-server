@@ -213,6 +213,75 @@ async function listColumns(projectRef: string) {
 }
 
 
+
+
+
+async function createColumnCmd(projectRef: string, title: string) {
+  const api = await makeApi();
+  const index = new IndexManager(api);
+  const project = await resolveProject(api, index, projectRef);
+  if (!project) { console.log(`❌ Project not found: "${projectRef}"`); process.exit(1); }
+  const table = project.cardTables[0];
+  const res = await api.createColumn(String(project.id), String(table.id), title);
+  console.log(`✅ created column "${title}" (id ${res?.data?.id})`);
+}
+
+async function renameColumnCmd(projectRef: string, columnId: string, title: string) {
+  const api = await makeApi();
+  const index = new IndexManager(api);
+  const project = await resolveProject(api, index, projectRef);
+  if (!project) { console.log(`❌ Project not found: "${projectRef}"`); process.exit(1); }
+  await api.updateColumn(String(project.id), columnId, title);
+  const after = await api.getColumn(String(project.id), columnId);
+  const now = after?.data?.title;
+  if (now !== title) { console.log(`❌ rename did not take (still "${now}")`); process.exit(1); }
+  console.log(`✅ column ${columnId} renamed to "${now}"`);
+}
+
+async function enableTool(projectRef: string, toolId: string) {
+  const api = await makeApi();
+  const index = new IndexManager(api);
+  const project = await resolveProject(api, index, projectRef);
+  if (!project) { console.log(`❌ Project not found: "${projectRef}"`); process.exit(1); }
+  // Undocumented endpoint; verified working on project 48433311 (2026-08-08).
+  await api.raw('PUT', `/${(api as any).accountId}/buckets/${project.id}/card_tables/${toolId}/enablement.json`, { enabled: true });
+  console.log(`✅ enablement requested for tool ${toolId} - verify with list-columns`);
+}
+
+async function rawRequest(method: string, path: string, body?: string) {
+  const api = await makeApi();
+  try {
+    const res = await api.raw(method.toUpperCase() as any, path, body ? JSON.parse(body) : undefined);
+    console.log(`✅ ${method.toUpperCase()} ${path}`);
+    console.log(JSON.stringify(res.data, null, 2).slice(0, 3000));
+  } catch (e: any) {
+    console.log(`❌ ${method.toUpperCase()} ${path} -> ${e.message}`);
+    process.exit(1);
+  }
+}
+
+async function createProject(name: string, description: string) {
+  const api = await makeApi();
+  const res = await api.createProject(name, description);
+  const id = res?.data?.id;
+  if (!id) { console.log('❌ Project creation returned no id'); process.exit(1); }
+  console.log(`✅ created project "${res.data.name}" (ID: ${id})`);
+  console.log(`   https://3.basecamp.com/${(api as any).accountId}/projects/${id}`);
+  const dock = await api.getProjectDock(String(id));
+  console.log('\n   dock tools:');
+  for (const [nm, t] of Object.entries(dock.data as Record<string, any>)) {
+    console.log(`     ${t.enabled ? '✓' : '✗'} ${nm}${t.enabled ? '' : '  (disabled)'}  id=${t.id}`);
+  }
+  const ct = (dock.data as Record<string, any>)['kanban_board'] || (dock.data as Record<string, any>)['card_table'];
+  if (!ct || !ct.enabled) {
+    console.log('\n   ⚠️  Card Table is NOT enabled on this project.');
+    console.log('      Basecamp does not expose tool-enablement over the API - enable it once in the web UI');
+    console.log('      (project page -> "..." -> Change tools -> Card Table), then run: normalize-columns ' + id + ' --apply');
+  } else {
+    console.log('\n   Card Table enabled. Next: normalize-columns ' + id + ' --apply');
+  }
+}
+
 // ---- column management ----
 const STANDARD_COLUMNS = [
   'Triage', 'Not now', 'Scope', 'Suggestions', 'Bugs',
@@ -504,6 +573,11 @@ Basecamp CLI (read + write)
   move-card    <project> <cardId> <column>            # column = id or title (e.g. "Ready for Testing")
   comments     <projectId> <cardId>                   # read a card's comment thread
   rename-project <projectId> <newName>                # rename a project (re-reads to confirm)
+  create-project <name> [description]                 # create a project; reports dock + whether Card Table is on
+  create-column <project> <title>                     # add a column to the board
+  rename-column <project> <columnId> <newTitle>       # rename a column (re-reads to confirm)
+  enable-tool   <project> <toolId>                    # enable a disabled dock tool (e.g. Card Table)
+  raw <METHOD> <path> [jsonBody]                      # escape hatch for un-modelled endpoints
   move-column  <project> <columnId> <position>        # reorder one column (1-based)
   trash-column <project> <columnId>                   # trash an EMPTY column (refuses if it holds cards)
   normalize-columns <project> [--apply]               # reorder board to the standard column set (dry-run by default)
@@ -578,6 +652,26 @@ Examples:
       case 'normalize-columns':
         if (args.length < 2) { console.log('Usage: normalize-columns <project> [--apply]'); process.exit(1); }
         await normalizeColumns(args[1], args.includes('--apply'));
+        break;
+      case 'create-column':
+        if (args.length < 3) { console.log('Usage: create-column <project> <title>'); process.exit(1); }
+        await createColumnCmd(args[1], args.slice(2).join(' '));
+        break;
+      case 'rename-column':
+        if (args.length < 4) { console.log('Usage: rename-column <project> <columnId> <newTitle>'); process.exit(1); }
+        await renameColumnCmd(args[1], args[2], args.slice(3).join(' '));
+        break;
+      case 'enable-tool':
+        if (args.length < 3) { console.log('Usage: enable-tool <project> <toolId>'); process.exit(1); }
+        await enableTool(args[1], args[2]);
+        break;
+      case 'raw':
+        if (args.length < 3) { console.log('Usage: raw <METHOD> <path> [jsonBody]'); process.exit(1); }
+        await rawRequest(args[1], args[2], args[3]);
+        break;
+      case 'create-project':
+        if (args.length < 2) { console.log('Usage: create-project <name> [description]'); process.exit(1); }
+        await createProject(args[1], args.slice(2).join(' '));
         break;
       case 'rename-project':
         if (args.length < 3) { console.log('Usage: rename-project <projectId> <newName>'); process.exit(1); }

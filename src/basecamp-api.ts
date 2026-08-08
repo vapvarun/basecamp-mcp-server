@@ -463,6 +463,18 @@ export class BasecampAPI {
     return this.post(`/${this.accountId}/buckets/${projectId}/card_tables/${cardTableId}/moves.json`, data);
   }
 
+  /**
+   * Escape hatch for endpoints this wrapper does not model yet.
+   * Prefer a named method; use this to probe, then promote it to a real method.
+   */
+  async raw<T = any>(method: 'GET'|'POST'|'PUT'|'DELETE', path: string, data?: any): Promise<BasecampResponse<T>> {
+    const p = path.startsWith('/') ? path : `/${path}`;
+    if (method === 'GET') return this.get<T>(p);
+    if (method === 'POST') return this.post<T>(p, data);
+    if (method === 'PUT') return this.put<T>(p, data);
+    return this.delete<T>(p);
+  }
+
   async trashColumn(projectId: string, columnId: string) {
     // Columns are recordings; trashing uses the recordings status endpoint.
     return this.put(`/${this.accountId}/buckets/${projectId}/recordings/${columnId}/status/trashed.json`, {});
