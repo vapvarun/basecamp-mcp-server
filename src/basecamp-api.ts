@@ -463,6 +463,11 @@ export class BasecampAPI {
     return this.post(`/${this.accountId}/buckets/${projectId}/card_tables/${cardTableId}/moves.json`, data);
   }
 
+  async trashColumn(projectId: string, columnId: string) {
+    // Columns are recordings; trashing uses the recordings status endpoint.
+    return this.put(`/${this.accountId}/buckets/${projectId}/recordings/${columnId}/status/trashed.json`, {});
+  }
+
   async watchColumn(projectId: string, columnId: string) {
     // Official API: POST /buckets/{projectId}/card_tables/lists/{columnId}/subscription.json
     return this.post(`/${this.accountId}/buckets/${projectId}/card_tables/lists/${columnId}/subscription.json`);

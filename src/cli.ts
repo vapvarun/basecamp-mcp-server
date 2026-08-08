@@ -212,6 +212,77 @@ async function listColumns(projectRef: string) {
   console.log('');
 }
 
+
+// ---- column management ----
+const STANDARD_COLUMNS = [
+  'Triage', 'Not now', 'Scope', 'Suggestions', 'Bugs',
+  'Ready for Development', 'In Development', 'Ready for Testing',
+  'Verified', 'In Testing', 'Done',
+];
+
+async function moveColumn(projectRef: string, columnId: string, position: string) {
+  const api = await makeApi();
+  const index = new IndexManager(api);
+  const project = await resolveProject(api, index, projectRef);
+  if (!project) { console.log(`❌ Project not found: "${projectRef}"`); process.exit(1); }
+  const table = project.cardTables[0];
+  await api.moveColumn(String(project.id), String(table.id), columnId, String(table.id), Number(position));
+  console.log(`✅ moved column ${columnId} to position ${position}`);
+}
+
+async function trashColumn(projectRef: string, columnId: string) {
+  const api = await makeApi();
+  const index = new IndexManager(api);
+  const project = await resolveProject(api, index, projectRef);
+  if (!project) { console.log(`❌ Project not found: "${projectRef}"`); process.exit(1); }
+  const before = await api.getColumn(String(project.id), columnId);
+  const title = before?.data?.title ?? '(unknown)';
+  const count = before?.data?.cards_count ?? 0;
+  if (count > 0) {
+    console.log(`❌ Refusing: column "${title}" still holds ${count} card(s). Move them first.`);
+    process.exit(1);
+  }
+  await api.trashColumn(String(project.id), columnId);
+  console.log(`✅ trashed empty column "${title}" (${columnId})`);
+}
+
+// Reorder a board's columns to STANDARD_COLUMNS. Dry-run unless --apply.
+async function normalizeColumns(projectRef: string, apply: boolean) {
+  const api = await makeApi();
+  const index = new IndexManager(api);
+  const project = await resolveProject(api, index, projectRef);
+  if (!project) { console.log(`❌ Project not found: "${projectRef}"`); process.exit(1); }
+  const table = project.cardTables[0];
+  const cur = table.columns.map((c: any) => ({ id: String(c.id), title: String(c.title) }));
+  const desired = STANDARD_COLUMNS.filter(t => cur.some(c => c.title === t));
+  const extras = cur.filter(c => !STANDARD_COLUMNS.includes(c.title)).map(c => c.title);
+
+  console.log(`\n📋 ${project.name} (${project.id})`);
+  console.log(`   current: ${cur.map(c => c.title).join(' | ')}`);
+  console.log(`   target : ${desired.join(' | ')}`);
+  if (extras.length) console.log(`   ⚠️  non-standard columns (left in place): ${extras.join(', ')}`);
+
+  const dupes = cur.filter((c, i) => cur.findIndex(x => x.title === c.title) !== i);
+  if (dupes.length) console.log(`   ⚠️  duplicate titles: ${dupes.map(d => `${d.title}(${d.id})`).join(', ')}`);
+
+  if (!apply) { console.log('   (dry run - pass --apply to perform moves)\n'); return; }
+
+  // Move each desired column into place, front to back. Basecamp positions are 1-based.
+  for (let i = 0; i < desired.length; i++) {
+    const title = desired[i];
+    const col = cur.find(c => c.title === title);
+    if (!col) continue;
+    await api.moveColumn(String(project.id), String(table.id), col.id, String(table.id), i + 1);
+  }
+  // Re-read: a 200 on moves is not proof the order took.
+  const after = await resolveProject(api, new IndexManager(api), String(project.id));
+  const now = after?.cardTables?.[0]?.columns?.map((c: any) => c.title) ?? [];
+  console.log(`   after  : ${now.join(' | ')}`);
+  const okOrder = desired.every((t, i) => now.indexOf(t) >= 0) &&
+    desired.map(t => now.indexOf(t)).every((v, i, a) => i === 0 || a[i - 1] < v);
+  console.log(okOrder ? '   ✅ order normalized\n' : '   ❌ order did NOT take - inspect manually\n');
+}
+
 // ---- create-card ----
 async function createCard(projectRef: string, columnRef: string, title: string, body: string) {
   const api = await makeApi();
@@ -433,6 +504,9 @@ Basecamp CLI (read + write)
   move-card    <project> <cardId> <column>            # column = id or title (e.g. "Ready for Testing")
   comments     <projectId> <cardId>                   # read a card's comment thread
   rename-project <projectId> <newName>                # rename a project (re-reads to confirm)
+  move-column  <project> <columnId> <position>        # reorder one column (1-based)
+  trash-column <project> <columnId>                   # trash an EMPTY column (refuses if it holds cards)
+  normalize-columns <project> [--apply]               # reorder board to the standard column set (dry-run by default)
 
 Examples:
   node build/cli.js list-columns 43067220
@@ -492,6 +566,18 @@ Examples:
       case 'comments':
         if (args.length < 3) { console.log('Usage: comments <projectId> <cardId>'); process.exit(1); }
         await listComments(args[1], args[2]);
+        break;
+      case 'move-column':
+        if (args.length < 4) { console.log('Usage: move-column <project> <columnId> <position>'); process.exit(1); }
+        await moveColumn(args[1], args[2], args[3]);
+        break;
+      case 'trash-column':
+        if (args.length < 3) { console.log('Usage: trash-column <project> <columnId>'); process.exit(1); }
+        await trashColumn(args[1], args[2]);
+        break;
+      case 'normalize-columns':
+        if (args.length < 2) { console.log('Usage: normalize-columns <project> [--apply]'); process.exit(1); }
+        await normalizeColumns(args[1], args.includes('--apply'));
         break;
       case 'rename-project':
         if (args.length < 3) { console.log('Usage: rename-project <projectId> <newName>'); process.exit(1); }
